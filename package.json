@@ -1,0 +1,17 @@
+{
+  "name": "project-unbound",
+  "version": "1.0.0",
+  "private": true,
+  "description": "No signup, privacy focused identity provider. More of stateless auth madness.",
+  "scripts": {
+    "dev": "concurrently \"pnpm run dev:server\" \"pnpm run dev:web\"",
+    "dev:server": "pnpm run dev --filter server",
+    "dev:web": "pnpm run dev --filter web"
+  },
+  "keywords": [],
+  "author": "Realzzy",
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}
