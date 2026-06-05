@@ -1,17 +1,21 @@
 {
-  "name": "@unbound/web",
-  "version": "1.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-      "dev": "pnpm run dev:css",
-      "build:css": "tailwindcss -i src/style.css -o ../server/public/style.css --content \"./src/**/*.{html,js,ts,jsx,tsx}\"",
-      "dev:css": "tailwindcss -i src/style.css -o ../server/public/style.css --content \"./src/**/*.{html,js,ts,jsx,tsx}\" --watch"
-  },
-  "packageManager": "pnpm@10.14.0",
-  "devDependencies": {
-    "@tailwindcss/cli": "^4.3.0",
-    "tailwindcss": "^4.3.0",
-    "typescript": "^6.0.3"
-  }
+    "name": "@unbound/web",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "pnpm run dev:css",
+        "build": "pnpm run build:css",
+        "build:css": "tailwindcss -i src/style.css -o ../server/public/style.css --content \"./src/**/*.{html,js,ts,jsx,tsx}\"",
+        "dev:css": "tailwindcss -i src/style.css -o ../server/public/style.css --content \"./src/**/*.{html,js,ts,jsx,tsx}\" --watch"
+    },
+    "packageManager": "pnpm@10.14.0",
+    "dependencies": {
+        "hono": "catalog:"
+    },
+    "devDependencies": {
+        "@tailwindcss/cli": "^4.3.0",
+        "tailwindcss": "^4.3.0",
+        "typescript": "^6.0.3"
+    }
 }

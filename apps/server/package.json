@@ -5,11 +5,12 @@
     "private": true,
     "packageManager": "pnpm@10.14.0",
     "scripts": {
-        "dev": "tsx watch ./src/server.ts"
+        "dev": "tsx watch ./src/server.tsx --tsconfig ./tsconfig.json",
+        "dev:node": "tsx watch ./src/server.node.ts --tsconfig ./tsconfig.json"
     },
     "dependencies": {
         "@hono/node-server": "^2.0.4",
-        "hono": "^4.12.23"
+        "hono": "catalog:"
     },
     "devDependencies": {
         "@types/node": "^25.9.1",

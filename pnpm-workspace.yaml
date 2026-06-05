@@ -2,3 +2,6 @@ packages:
   - apps/*
   - packages/*
   - scripts
+
+catalog:
+  hono: 4.12.23

@@ -22,11 +22,11 @@
         "allowSyntheticDefaultImports": true,
         "baseUrl": ".",
         "paths": {
-            "@unbound/server": ["apps/server/src/server.ts"],
+            "@unbound/server": ["apps/server/src/server.tsx"],
             "@unbound/server/*": ["apps/server/src/*"],
             "@unbound/web/*": ["apps/web/src/*"],
             "@unbound/types": ["packages/types/src/index.d.ts"],
-            "@unbound/types/*": ["packages/types/src/*"]
+            "@unbound/types/*": ["packages/types/src/*"],
         },
         "types": [],
     },
