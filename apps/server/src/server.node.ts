@@ -2,6 +2,7 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 
 import dotenv from "dotenv";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,7 +16,26 @@ export function startNodeServer(app: App) {
         "../public",
     );
 
-    app.use("/*", serveStatic({ root }));
+    const servePublic = serveStatic({ root });
+    app.use("/*", async (context, next) => {
+        // Exclude style from being cached served on dev
+        if (process.env.NODE_ENV !== "production" && context.req.path === "/style.css") {
+            try {
+                const css = await readFile(path.join(root, "style.css"));
+
+                return new Response(css, {
+                    headers: {
+                        "Content-Type": "text/css; charset=utf-8",
+                        "Cache-Control": "no-cache"
+                    },
+                });
+            } catch {
+                return new Response("Not Found", { status: 404 });
+            }
+        }
+
+        return servePublic(context, next);
+    });
 
     const server = serve({
         fetch: (request, nodeBindings) =>

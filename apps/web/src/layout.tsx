@@ -5,9 +5,10 @@ import type { Session } from "@unbound/types";
 export type LayoutProps = PropsWithChildren<{
     title?: string | null;
     session?: Partial<Session> | null;
+    empty?: boolean;
 }>;
 
-export function Layout({ title, children }: LayoutProps) {
+export function Layout({ title, empty, children }: LayoutProps) {
     return (
         <html>
             <head>
@@ -20,7 +21,12 @@ export function Layout({ title, children }: LayoutProps) {
                 <link rel="stylesheet" href="/style.css" />
             </head>
             <body>
-                {children}
+                {empty ? children : (
+                    <>
+                        <nav>{/* TODO */}</nav>
+                        <main>{children}</main>
+                    </>
+                )}
             </body>
         </html>
     )

@@ -3,7 +3,10 @@ import { getRuntimeKey } from "hono/adapter";
 
 import { sessionMiddleware } from "@unbound/server/auth/session";
 
+import { checkEnvConfiguration } from "@unbound/server/utils/config";
+
 import { Layout } from "@unbound/web/layout";
+import { SetupPage } from "@unbound/web/pages/setup";
 
 import type { Env, SessionVariables } from "@unbound/types";
 
@@ -13,12 +16,20 @@ export type AppEnv = { Bindings: Env; Variables: Variables };
 const app = new Hono<AppEnv>();
 export type App = typeof app;
 
+app.use("*", async (c, next) => {
+    const result = await checkEnvConfiguration(c);
+    if (result.missing && result.missing.length > 0) {
+        if (c.req.path == "/style.css") await next();
+        return c.html(<SetupPage result={result} />);
+    }
+    await next();
+});
 app.use("*", sessionMiddleware);
 
 app.get("/", (c) => {
     const loggedIn = c.get("isLoggedIn");
     const session = c.get("session");
-    
+
     return c.html(
         <Layout title="Home">
             <h1>Unbound dev. Timestamp: {Date.now()}</h1>
@@ -43,7 +54,7 @@ app.get("/make-me-login", async (c) => {
         provider: "google",
         name: "Six Seven",
         email: "67@sixseven.ceo",
-        timestamp: Date.now()
+        timestamp: Date.now(),
     });
 
     return c.redirect("/");
@@ -53,7 +64,7 @@ app.get("/make-me-logout", async (c) => {
     clearSession();
 
     return c.redirect("/");
-})
+});
 
 export default app;
 
