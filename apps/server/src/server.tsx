@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { getRuntimeKey } from "hono/adapter";
 
-import { sessionMiddleware } from "@unbound/server/auth/session";
+import { setupMiddleware } from "@unbound/server/middlewares/setup";
+import { sessionMiddleware } from "@unbound/server/middlewares/session";
 
-import { checkEnvConfiguration } from "@unbound/server/utils/config";
+import openIdRoutes from "@unbound/server/routes/openid";
 
 import { Layout } from "@unbound/web/layout";
-import { SetupPage } from "@unbound/web/pages/setup";
 
 import type { Env, SessionVariables } from "@unbound/types";
 
@@ -16,14 +16,7 @@ export type AppEnv = { Bindings: Env; Variables: Variables };
 const app = new Hono<AppEnv>();
 export type App = typeof app;
 
-app.use("*", async (c, next) => {
-    const result = await checkEnvConfiguration(c);
-    if (result.missing && result.missing.length > 0) {
-        if (c.req.path == "/style.css") await next();
-        return c.html(<SetupPage result={result} />);
-    }
-    await next();
-});
+app.use("*", setupMiddleware);
 app.use("*", sessionMiddleware);
 
 app.get("/", (c) => {
@@ -45,6 +38,8 @@ app.get("/", (c) => {
         </Layout>,
     );
 });
+
+app.route("/", openIdRoutes);
 
 // Dev only
 app.get("/make-me-login", async (c) => {

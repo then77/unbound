@@ -2,6 +2,7 @@ export interface Session {
     sub?: string;
     provider?: "google" | "github" | "discord";
     name?: string;
+    picture?: string;
     email?: string;
     email_verified?: boolean;
     timestamp?: number;
