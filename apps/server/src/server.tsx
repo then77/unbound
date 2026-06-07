@@ -5,6 +5,7 @@ import { setupMiddleware } from "@unbound/server/middlewares/setup";
 import { sessionMiddleware } from "@unbound/server/middlewares/session";
 
 import openIdRoutes from "@unbound/server/routes/openid";
+import loginRoutes from "@unbound/server/routes/login";
 
 import { Layout } from "@unbound/web/layout";
 
@@ -40,6 +41,7 @@ app.get("/", (c) => {
 });
 
 app.route("/", openIdRoutes);
+app.route("/", loginRoutes);
 
 // Dev only
 app.get("/make-me-login", async (c) => {

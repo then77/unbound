@@ -1,25 +1,42 @@
-export interface Session {
+export type UserProvider = "google" | "github" | "discord";
+
+export interface User {
     sub?: string;
-    provider?: "google" | "github" | "discord";
+    provider?: UserProvider;
     name?: string;
     picture?: string;
     email?: string;
     email_verified?: boolean;
-    timestamp?: number;
+}
 
-    // For account info refresh
+export interface Flash {
+    id: string;
+    type: "info" | "success" | "warn" | "error";
+    message?: string;
+    sticky?: boolean;
+    dismissable?: boolean;
+}
+
+export type Session = User & {
+    // Time when this session was successfully created
+    timestamp?: number | null;
+
+    // Account refresh token for refetch user profile later
     account_refresh_token?: string | null;
 
     // For session flash (ex. toast)
-    flash?: { id: string; message?: string, sticky?: boolean; dismissable?: boolean; } | null;
+    flash?: Flash | null;
 
-    // For temporary store redirect for login
-    redirect?: string;
-}
+    // For temporary store login flow info
+    login_redirect?: string | null;
+    login_method?: string | null;
+    login_verifier?: string | null;
+};
 
 export type SessionVariables = {
     session: Session | null;
     isLoggedIn: () => boolean;
-    setSession: (session: Partial<Session>) => Promise<void>
+    setSession: (session: Partial<Session>) => Promise<void>;
     clearSession: () => void;
-}
+    setFlash: (flash: Flash) => Promise<void>;
+};

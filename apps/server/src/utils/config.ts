@@ -149,6 +149,26 @@ export async function checkEnvConfiguration(
         }
     }
 
+    // Checks missing pair of oauth client config
+    const providers = [
+        ["Google", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+        ["GitHub", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"],
+        ["Discord", "DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"],
+    ] as const;
+    const oauthMissing = (x: string) =>
+        `${x} auth requires both client id and secret to work.`;
+    
+    for (const [name, idKey, secretKey] of providers) {
+        const hasId = !!c.env[idKey];
+        const hasSecret = !!c.env[secretKey];
+    
+        if (hasId !== hasSecret) {
+            const missingKey = hasId ? secretKey : idKey;
+            missing(missingKey);
+            errors(missingKey, oauthMissing(name));
+        }
+    }
+
     cachedConfigResult = result;
     return result;
 }

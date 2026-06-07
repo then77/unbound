@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { exportJWK, generateKeyPair } from "jose";
 
 const DEFAULT_KEY_ALGORITHM = "ES256";
@@ -24,6 +25,13 @@ export function generateRandomString(length = 32) {
     }
 
     return result;
+}
+
+export function generatePKCE() {
+    const verifier = generateRandomString();
+    const challenge = createHash("sha256").update(verifier).digest("base64url");
+
+    return { verifier, challenge };
 }
 
 export async function generateJWKPair() {

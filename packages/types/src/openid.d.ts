@@ -1,3 +1,7 @@
+/**
+ * OpenID Configuration Spec Type
+ */
+
 export type SubjectType = "public" | "pairwise";
 
 export type ResponseType = "code" | "id_token" | "token";
