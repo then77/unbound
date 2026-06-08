@@ -28,7 +28,7 @@ export function generateRandomString(length = 32) {
 }
 
 export function generatePKCE() {
-    const verifier = generateRandomString();
+    const verifier = generateRandomString(64);
     const challenge = createHash("sha256").update(verifier).digest("base64url");
 
     return { verifier, challenge };

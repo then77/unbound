@@ -27,9 +27,28 @@ const callbackQuerySchema = z.object({
 
 const app = new Hono<AppEnv>();
 
-app.get("/login", async (c) => {
-    const session = c.get("session");
-    return c.json(session ?? {});
+app.get("/login", zValidator("query", authQuerySchema), async (c) => {
+    const { redirect_to } = c.req.valid("query");
+    function make(provider: string) {
+        const url = new URL(`/auth/${provider}`, c.req.url);
+
+        if (redirect_to) {
+            url.searchParams.set("redirect_to", redirect_to);
+        }
+
+        return url.pathname + url.search;
+    }
+
+    return c.render(
+        <>
+            <a href={make("google")}>Login with Google</a>
+            <br />
+            <a href={make("github")}>Login with Github</a>
+            <br />
+            <a href={make("discord")}>Login with Discord</a>
+        </>,
+        { title: "Login" },
+    );
 });
 
 app.get("/auth/:provider", zValidator("query", authQuerySchema), async (c) => {
@@ -74,7 +93,7 @@ app.get("/auth/:provider", zValidator("query", authQuerySchema), async (c) => {
             await setFlash({
                 id: "login",
                 type: "error",
-                message: `${name} is unavailable. Please try again later.`,
+                message: `${name} login is unavailable. Please try again later.`,
             });
         } else {
             await setFlash({
@@ -128,7 +147,7 @@ app.get(
             (context: typeof c, code: string) => Promise<OauthResult>
         > = {
             google: finishGoogleOauth,
-            github: finishDiscordOauth,
+            github: finishGithubOauth,
             discord: finishDiscordOauth,
         };
 
@@ -140,7 +159,7 @@ app.get(
                 await setFlash({
                     id: "login",
                     type: "error",
-                    message: `${name} login failed. Please try again. ${error.errorType}`,
+                    message: `${name} login failed. Please try again.`,
                 });
             } else {
                 await setFlash({
@@ -165,7 +184,6 @@ app.get(
             picture: result.picture,
             email: result.email,
             email_verified: result.email_verified,
-            account_refresh_token: result.refresh_token,
         });
 
         await setFlash({

@@ -14,7 +14,7 @@ import type { Context } from "hono";
 import type { User, UserProvider } from "@unbound/types";
 
 export type OauthStart = { url: string; state: string; verifier: string };
-export type OauthResult = User & { refresh_token?: string };
+export type OauthResult = User;
 
 export function generateOauthUrl(
     authorizeUrl: string,
@@ -129,14 +129,13 @@ export async function finishGoogleOauth(
     if (oauthSession.method != "google")
         throw new OauthError("google", "INVALID_LOGIN_SESSION");
 
-    const { access_token, refresh_token } = await handleOauthError(
+    const { access_token } = await handleOauthError(
         "google",
         "ERROR_EXCHANGE",
         () =>
             ky
                 .post<{
                     access_token: string;
-                    refresh_token?: string;
                 }>("https://oauth2.googleapis.com/token", {
                     headers: {
                         "content-type": "application/x-www-form-urlencoded",
@@ -176,7 +175,6 @@ export async function finishGoogleOauth(
         picture: user.picture,
         email: user.email,
         email_verified: user.verified_email,
-        refresh_token,
     };
 }
 
@@ -281,14 +279,13 @@ export async function finishDiscordOauth(
     if (oauthSession.method != "discord")
         throw new OauthError("discord", "INVALID_LOGIN_SESSION");
 
-    const { access_token, refresh_token } = await handleOauthError(
+    const { access_token } = await handleOauthError(
         "discord",
         "ERROR_EXCHANGE",
         () =>
             ky
                 .post<{
                     access_token: string;
-                    refresh_token?: string;
                 }>("https://discord.com/api/oauth2/token", {
                     headers: {
                         "content-type": "application/x-www-form-urlencoded",
@@ -331,121 +328,5 @@ export async function finishDiscordOauth(
             : undefined,
         email: user.email,
         email_verified: user.verified,
-        refresh_token,
-    };
-}
-
-export async function refreshGoogleOauth(
-    c: Context<AppEnv>,
-    refreshToken: string,
-): Promise<OauthResult> {
-    const clientId = c.env.GOOGLE_CLIENT_ID!;
-    const clientSecret = c.env.GOOGLE_CLIENT_SECRET!;
-
-    const { access_token, refresh_token } = await handleOauthError(
-        "google",
-        "ERROR_REFRESH",
-        () =>
-            ky
-                .post<{
-                    access_token: string;
-                    refresh_token?: string;
-                }>("https://oauth2.googleapis.com/token", {
-                    headers: {
-                        "content-type": "application/x-www-form-urlencoded",
-                    },
-                    body: new URLSearchParams({
-                        grant_type: "refresh_token",
-                        refresh_token: refreshToken,
-                        client_id: clientId,
-                        client_secret: clientSecret,
-                    }),
-                })
-                .json(),
-    );
-
-    const user = await handleOauthError("google", "ERROR_USERINFO", () =>
-        ky
-            .get<{
-                id: string;
-                name?: string;
-                picture?: string;
-                email?: string;
-                verified_email?: boolean;
-            }>("https://www.googleapis.com/oauth2/v2/userinfo", {
-                headers: {
-                    Authorization: `Bearer ${access_token}`,
-                },
-            })
-            .json(),
-    );
-
-    return {
-        sub: user.id,
-        provider: "google",
-        name: user.name,
-        picture: user.picture,
-        email: user.email,
-        email_verified: user.verified_email,
-        refresh_token: refresh_token ?? refreshToken,
-    };
-}
-
-export async function refreshDiscordOauth(
-    c: Context<AppEnv>,
-    refreshToken: string,
-): Promise<OauthResult> {
-    const clientId = c.env.DISCORD_CLIENT_ID!;
-    const clientSecret = c.env.DISCORD_CLIENT_SECRET!;
-
-    const { access_token, refresh_token } = await handleOauthError(
-        "discord",
-        "ERROR_REFRESH",
-        () =>
-            ky
-                .post<{
-                    access_token: string;
-                    refresh_token?: string;
-                }>("https://discord.com/api/oauth2/token", {
-                    headers: {
-                        "content-type": "application/x-www-form-urlencoded",
-                    },
-                    body: new URLSearchParams({
-                        grant_type: "refresh_token",
-                        refresh_token: refreshToken,
-                        client_id: clientId,
-                        client_secret: clientSecret,
-                    }),
-                })
-                .json(),
-    );
-
-    const user = await handleOauthError("discord", "ERROR_USERINFO", () =>
-        ky
-            .get<{
-                id: string;
-                username: string;
-                global_name?: string;
-                avatar?: string;
-                email?: string;
-                verified?: boolean;
-            }>("https://discord.com/api/users/@me", {
-                headers: {
-                    Authorization: `Bearer ${access_token}`,
-                },
-            })
-            .json(),
-    );
-
-    return {
-        sub: user.id,
-        provider: "discord",
-        name: user.global_name ?? user.username,
-        picture: user.avatar
-            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-            : undefined,
-        email: user.email,
-        email_verified: user.verified,
-        refresh_token: refresh_token ?? refreshToken,
     };
 }

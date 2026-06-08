@@ -11,14 +11,17 @@ export const setupMiddleware = createMiddleware<AppEnv>(async (c, next) => {
         await next();
         return;
     }
-    
+
     const result = await checkEnvConfiguration(c);
     if (
         (result.missing && result.missing.length > 0) ||
         (result.errors && Object.entries(result.errors).length > 0)
     ) {
-        return c.html(<SetupPage result={result} />);
+        return c.render(<SetupPage result={result} />, {
+            title: "Setup Required",
+            empty: true,
+        });
     }
-    
+
     await next();
 });

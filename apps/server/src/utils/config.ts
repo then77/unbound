@@ -165,7 +165,7 @@ export async function checkEnvConfiguration(
         if (hasId !== hasSecret) {
             const missingKey = hasId ? secretKey : idKey;
             missing(missingKey);
-            errors(missingKey, oauthMissing(name));
+            errors(hasId ? idKey : secretKey, oauthMissing(name));
         }
     }
 

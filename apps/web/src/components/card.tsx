@@ -1,12 +1,41 @@
+/**
+ * Card component
+ *
+ * Adapted from shadcn/ui card component
+ * @see https://ui.shadcn.com/docs/components/card
+ */
+
+import { cva, type VariantProps } from "class-variance-authority";
 import type { JSX } from "hono/jsx";
 import { css } from "@unbound/web/lib/utils";
 
-type CardProps = JSX.IntrinsicElements["div"] & {
-    size?: "default" | "sm";
-};
+export const cardVariants = cva(
+    "group/card flex flex-col gap-4 overflow-hidden rounded-xl border p-4 text-sm data-[size=sm]:gap-3 data-[size=sm]:p-3",
+    {
+        variants: {
+            variant: {
+                default: "border-border bg-card text-foreground",
+                primary:
+                    "border-primary bg-primary-background text-primary-foreground",
+                success:
+                    "border-success bg-success-background text-success-foreground",
+                danger: "border-danger bg-danger-background text-danger-foreground",
+            },
+        },
+        defaultVariants: {
+            variant: "default",
+        },
+    },
+);
+
+export type CardProps = JSX.IntrinsicElements["div"] &
+    VariantProps<typeof cardVariants> & {
+        size?: "default" | "sm";
+    };
 
 export function Card({
     class: className,
+    variant,
     size = "default",
     ...props
 }: CardProps) {
@@ -14,10 +43,7 @@ export function Card({
         <div
             data-slot="card"
             data-size={size}
-            class={css(
-                "group/card flex flex-col gap-4 overflow-hidden rounded-xl border border-border bg-card p-4 text-sm text-foreground data-[size=sm]:gap-3 data-[size=sm]:p-3",
-                className,
-            )}
+            class={css(cardVariants({ variant }), className)}
             {...props}
         />
     );

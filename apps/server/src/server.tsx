@@ -1,13 +1,13 @@
 import { Hono } from "hono";
+
 import { getRuntimeKey } from "hono/adapter";
 
+import { rendererMiddleware } from "@unbound/server/middlewares/renderer";
 import { setupMiddleware } from "@unbound/server/middlewares/setup";
 import { sessionMiddleware } from "@unbound/server/middlewares/session";
 
 import openIdRoutes from "@unbound/server/routes/openid";
 import loginRoutes from "@unbound/server/routes/login";
-
-import { Layout } from "@unbound/web/layout";
 
 import type { Env, SessionVariables } from "@unbound/types";
 
@@ -17,6 +17,20 @@ export type AppEnv = { Bindings: Env; Variables: Variables };
 const app = new Hono<AppEnv>();
 export type App = typeof app;
 
+// Patch for jsx render context to include title
+declare module "hono" {
+    interface ContextRenderer {
+        (
+            content: string | Promise<string>,
+            props: {
+                title: string;
+                empty?: boolean;
+            },
+        ): Response;
+    }
+}
+
+app.use("*", rendererMiddleware);
 app.use("*", setupMiddleware);
 app.use("*", sessionMiddleware);
 
@@ -24,8 +38,8 @@ app.get("/", (c) => {
     const loggedIn = c.get("isLoggedIn");
     const session = c.get("session");
 
-    return c.html(
-        <Layout title="Home">
+    return c.render(
+        <>
             <h1>Unbound dev. Timestamp: {Date.now()}</h1>
             <p>Logged in?: {loggedIn() ? "true" : "false"}</p>
             {session ? (
@@ -34,9 +48,10 @@ app.get("/", (c) => {
                     <a href="/make-me-logout">Click to logout</a>
                 </p>
             ) : (
-                <a href="/make-me-login">Click to login</a>
+                <a href="/login?redirect_to=/">Click to login</a>
             )}
-        </Layout>,
+        </>,
+        { title: "Home" },
     );
 });
 

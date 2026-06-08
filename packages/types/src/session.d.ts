@@ -11,7 +11,7 @@ export interface User {
 
 export interface Flash {
     id: string;
-    type: "info" | "success" | "warn" | "error";
+    type: "info" | "success" | "error";
     message?: string;
     sticky?: boolean;
     dismissable?: boolean;
@@ -20,9 +20,6 @@ export interface Flash {
 export type Session = User & {
     // Time when this session was successfully created
     timestamp?: number | null;
-
-    // Account refresh token for refetch user profile later
-    account_refresh_token?: string | null;
 
     // For session flash (ex. toast)
     flash?: Flash | null;

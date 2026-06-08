@@ -1,3 +1,10 @@
+/**
+ * Button component
+ *
+ * Adapted from shadcn/ui button component
+ * @see https://ui.shadcn.com/docs/components/button
+ */
+
 import { cva, type VariantProps } from "class-variance-authority";
 import type { JSX } from "hono/jsx";
 import { css } from "@unbound/web/lib/utils";

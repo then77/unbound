@@ -3,8 +3,19 @@
 :root {
     --background: #0d0c13;
     --foreground: #f0f0f0;
-    --primary: #2a206e;
-    --danger: #e3242a;
+    
+    --primary: #31257e;
+    --primary-foreground: #9b90df;
+    --primary-background: #19133f;
+
+    --success: #178c46;
+    --success-foreground: #73e8a2;
+    --success-background: #08391c;
+    
+    --danger: #e7292f;
+    --danger-foreground: #F7b6b8;
+    --danger-background: #610a0d;
+    
     --card: #0e0e17;
     --muted: #282828;
     --muted-foreground: #a0a0a0;
@@ -19,8 +30,19 @@
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+    
     --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-background: var(--primary-background);
+    
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-success-background: var(--success-background);
+    
     --color-danger: var(--danger);
+    --color-danger-foreground: var(--danger-foreground);
+    --color-danger-background: var(--danger-background);
+    
     --color-card: var(--card);
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
@@ -32,4 +54,22 @@
 html {
     background-color: var(--background);
     color: var(--foreground);
+}
+
+@keyframes flashIn {
+    from { transform: translateY(-40px); opacity: 0; };
+    to { transform: translateY(0); opacity: 1; };
+}
+
+@keyframes flashOut {
+    from { opacity: 1; };
+    to { opacity: 0; };
+}
+
+#flash > div {
+    animation: flashIn .3s cubic-bezier(.28,.95,.55,1) forwards;
+}
+
+#flash[data-state="exit"] > div {
+    animation: flashOut .3s cubic-bezier(.28,.95,.55,1) forwards;
 }
