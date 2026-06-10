@@ -1,5 +1,3 @@
-import { css } from "@unbound/web/lib/utils";
-
 import { Card, CardContent } from "@unbound/web/components/card";
 
 import { Check, Info, CircleAlert, XIcon } from "@lucide/icons";
@@ -24,18 +22,20 @@ export function Flash({ flash }: { flash: Flash }) {
     const variantMap: Record<Flash["type"], CardProps["variant"]> = {
         info: "primary",
         success: "success",
+        warning: "warning",
         error: "danger",
     };
     const iconMap: Record<Flash["type"], LucideIconData> = {
         info: Info,
         success: Check,
+        warning: CircleAlert,
         error: CircleAlert,
     };
 
     return (
         <div
             id="flash"
-            class="w-full fixed z-100 top-6 left-0 right-0 px-8 pointer-events-none flex justify-center"
+            class="w-full fixed z-100 top-8 left-0 right-0 px-8 pointer-events-none flex justify-center"
         >
             <Card
                 variant={variantMap[flash.type]}

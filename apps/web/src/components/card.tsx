@@ -19,6 +19,7 @@ export const cardVariants = cva(
                     "border-primary bg-primary-background text-primary-foreground",
                 success:
                     "border-success bg-success-background text-success-foreground",
+                warning: "border-warning bg-warning-background text-warning-foreground",
                 danger: "border-danger bg-danger-background text-danger-foreground",
             },
         },

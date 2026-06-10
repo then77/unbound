@@ -11,7 +11,7 @@ export interface User {
 
 export interface Flash {
     id: string;
-    type: "info" | "success" | "error";
+    type: "info" | "success" | "warning" | "error";
     message?: string;
     sticky?: boolean;
     dismissable?: boolean;

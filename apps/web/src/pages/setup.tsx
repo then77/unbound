@@ -67,7 +67,7 @@ export function SetupPage({
                 </EmptyHeader>
                 <EmptyContent class="max-w-2xl gap-4">
                     {missing.length > 0 && (
-                        <div class="text-muted-foreground text-sm/relaxed">
+                        <div class="text-muted-foreground text-base/relaxed">
                             Some required environment variables are missing:
                             <br />
                             {missing.map((m, i) => (
@@ -80,26 +80,26 @@ export function SetupPage({
                     )}
                     {errorsEntries.length > 0 && (
                         <>
-                            <div class="text-muted-foreground text-sm/relaxed">
+                            <div class="text-muted-foreground text-base/relaxed">
                                 Some environment variables
                                 {missing.length > 0 ? " also " : " are "}
                                 returning error:
                             </div>
                             <Card class="w-full text-left" size="sm">
                                 <CardContent>
-                                    <pre class="w-full overflow-x-auto rounded-lg border border-border bg-muted/50 p-4 text-xs leading-relaxed text-card-foreground">
+                                    <pre class="w-full overflow-x-auto rounded-lg p-4 text-sm leading-relaxed">
                                         <code>{errorsEntries.join("\n")}</code>
                                     </pre>
                                 </CardContent>
                             </Card>
                         </>
                     )}
-                    <div class="text-muted-foreground text-sm/relaxed">
+                    <div class="text-muted-foreground text-base/relaxed">
                         Please configure these variables and restart/rebuild the
                         server.
                     </div>
                     {defaultEntries.length > 0 && (
-                        <Card class="w-full text-left mt-4" size="sm">
+                        <Card class="w-full text-left mt-4">
                             <CardHeader>
                                 <CardTitle>Generated values</CardTitle>
                                 <CardDescription>
@@ -109,7 +109,7 @@ export function SetupPage({
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <pre class="w-full overflow-x-auto rounded-lg border border-border bg-muted/50 p-4 text-xs leading-relaxed text-card-foreground">
+                                <pre class="w-full overflow-x-auto rounded-lg p-4 text-sm leading-relaxed">
                                     <code>{defaultEntries.join("\n")}</code>
                                 </pre>
                                 {("JWK_PUBLIC_KEY" in defaults ||

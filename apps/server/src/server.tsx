@@ -8,6 +8,7 @@ import { sessionMiddleware } from "@unbound/server/middlewares/session";
 
 import openIdRoutes from "@unbound/server/routes/openid";
 import loginRoutes from "@unbound/server/routes/login";
+import authorizeRoutes from "@unbound/server/routes/authorize";
 
 import type { Env, SessionVariables } from "@unbound/types";
 
@@ -42,10 +43,12 @@ app.get("/", (c) => {
         <>
             <h1>Unbound dev. Timestamp: {Date.now()}</h1>
             <p>Logged in?: {loggedIn() ? "true" : "false"}</p>
-            {session ? (
+            {loggedIn() ? (
                 <p>
-                    As: {session.name} ({session.email}).
-                    <a href="/make-me-logout">Click to logout</a>
+                    As: {session!.name} ({session!.email}).
+                    <form action="/logout" method="post">
+                        <a href="/logout" onclick="event.preventDefault();this.closest('form').submit();">Click to logout</a>
+                    </form>
                 </p>
             ) : (
                 <a href="/login?redirect_to=/">Click to login</a>
@@ -57,26 +60,7 @@ app.get("/", (c) => {
 
 app.route("/", openIdRoutes);
 app.route("/", loginRoutes);
-
-// Dev only
-app.get("/make-me-login", async (c) => {
-    const setSession = c.get("setSession");
-    await setSession({
-        sub: "6767676767676767",
-        provider: "google",
-        name: "Six Seven",
-        email: "67@sixseven.ceo",
-        timestamp: Date.now(),
-    });
-
-    return c.redirect("/");
-});
-app.get("/make-me-logout", async (c) => {
-    const clearSession = c.get("clearSession");
-    clearSession();
-
-    return c.redirect("/");
-});
+app.route("/", authorizeRoutes);
 
 export default app;
 

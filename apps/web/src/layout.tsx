@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "hono/jsx";
 
+import { Navbar } from "@unbound/web/components/navbar";
 import { Flash } from "@unbound/web/components/flash";
 
 import type { Session } from "@unbound/types";
@@ -32,15 +33,18 @@ export function Layout({ title, session, empty, children }: LayoutProps) {
                 />
                 <link rel="stylesheet" href="/style.css" />
             </head>
-            <body>
+            <body class="flex flex-col items-center min-h-screen px-8">
                 {session?.flash && <Flash flash={session.flash} />}
                 {empty ? (
                     children
                 ) : (
-                    <>
-                        <nav>{/* TODO */}</nav>
-                        <main>{children}</main>
-                    </>
+                    <div class="w-full flex-1 max-w-6xl flex flex-col">
+                        <Navbar session={session} />
+                        <main class="flex flex-col w-full flex-1">
+                            {children}
+                        </main>
+                        <footer class="w-full h-12" />
+                    </div>
                 )}
             </body>
         </html>

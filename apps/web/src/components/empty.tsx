@@ -16,7 +16,7 @@ export function Empty({
         <div
             data-slot="empty"
             class={css(
-                "flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-dashed p-6 text-center text-balance",
+                "flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-dashed py-6 text-center text-balance",
                 className,
             )}
             {...props}
@@ -31,7 +31,7 @@ export function EmptyHeader({
     return (
         <div
             data-slot="empty-header"
-            class={css("flex max-w-sm flex-col items-center gap-2", className)}
+            class={css("flex max-w-md flex-col items-center gap-2", className)}
             {...props}
         />
     );
@@ -45,7 +45,7 @@ export function EmptyMedia({
         <div
             data-slot="empty-media"
             class={css(
-                "mb-2 flex p-2 shrink-0 items-center justify-center rounded-lg bg-white/10 [&_svg]:pointer-events-none [&_svg]:size-8 [&_svg]:shrink-0",
+                "mb-2 flex p-3 shrink-0 items-center justify-center rounded-lg bg-white/10 [&_svg]:pointer-events-none [&_svg]:size-8 [&_svg]:shrink-0",
                 className,
             )}
             {...props}
@@ -60,7 +60,7 @@ export function EmptyTitle({
     return (
         <div
             data-slot="empty-title"
-            class={css("text-xl font-semibold tracking-tight", className)}
+            class={css("text-2xl font-semibold tracking-tight", className)}
             {...props}
         />
     );
@@ -74,7 +74,7 @@ export function EmptyDescription({
         <div
             data-slot="empty-description"
             class={css(
-                "text-muted-foreground text-sm/relaxed [&>a]:underline [&>a]:underline-offset-4",
+                "text-muted-foreground text-base/relaxed [&>a]:underline [&>a]:underline-offset-4",
                 className,
             )}
             {...props}
