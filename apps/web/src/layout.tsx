@@ -9,9 +9,10 @@ export type LayoutProps = PropsWithChildren<{
     title?: string | null;
     session?: Partial<Session> | null;
     empty?: boolean;
+    isHomePage?: boolean;
 }>;
 
-export function Layout({ title, session, empty, children }: LayoutProps) {
+export function Layout({ title, session, empty, isHomePage, children }: LayoutProps) {
     return (
         <html class="antialiased">
             <head>
@@ -21,6 +22,7 @@ export function Layout({ title, session, empty, children }: LayoutProps) {
                     content="width=device-width, initial-scale=1"
                 />
                 <title>{title ? `${title} - Unbound` : "Unbound"}</title>
+                <link rel="icon" href="/favicon.ico" />
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link
                     rel="preconnect"
@@ -39,7 +41,7 @@ export function Layout({ title, session, empty, children }: LayoutProps) {
                     children
                 ) : (
                     <div class="w-full flex-1 max-w-6xl flex flex-col">
-                        <Navbar session={session} />
+                        <Navbar session={session} showLogin={isHomePage} />
                         <main class="flex flex-col w-full flex-1">
                             {children}
                         </main>

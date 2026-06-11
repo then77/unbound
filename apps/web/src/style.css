@@ -57,6 +57,8 @@
     --color-border: var(--border);
 
     --font-sans: var(--sans);
+
+    --animate-buttonbar: buttonBarOut 1.3s cubic-bezier(.46,.03,.52,.96) forwards;
 }
 
 html {
@@ -99,6 +101,15 @@ code {
     }
 }
 
+@keyframes buttonBarOut {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+
 #flash > div {
     opacity: 0;
     animation: flashIn 0.3s cubic-bezier(0.19, 1, 0.75, 1) forwards;
@@ -106,4 +117,24 @@ code {
 
 #flash[data-state="exit"] > div {
     animation: flashOut 0.3s ease forwards;
+}
+
+.open-transition {
+    transition:
+        opacity 0.2s ease,
+        max-height 0.2s ease;
+    opacity: 0;
+    max-height: 0px;
+    overflow-y: clip;
+}
+
+svg.dot-line circle {
+    animation: var(--animate-pulse);
+    animation-duration: 3s;
+}
+svg.dot-line circle:nth-child(2) {
+    animation-delay: 0.2s;
+}
+svg.dot-line circle:nth-child(3) {
+    animation-delay: 0.4s;
 }

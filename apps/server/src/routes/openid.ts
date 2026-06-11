@@ -22,7 +22,7 @@ app.get("/openid-configuration", async (c) => {
         subject_types_supported: ["pairwise"],
         id_token_signing_alg_values_supported: [signingAlg],
         token_endpoint_auth_methods_supported: ["none"],
-        prompt_values_supported: ["consent", "login", "select_account"],
+        prompt_values_supported: ["consent", "login"],
         code_challenge_methods_supported: ["S256"],
         scopes_supported: ["openid", "profile", "email"],
         grant_types_supported: ["authorization_code"],

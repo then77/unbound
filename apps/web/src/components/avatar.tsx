@@ -46,9 +46,11 @@ export function AvatarImage({
 
 export type AvatarFallbackProps = JSX.IntrinsicElements["span"] & {
     text?: string;
+    charCount?: number;
+    alwaysShow?: boolean;
 };
 
-function getAvatarFallbackText(value: unknown) {
+function getAvatarFallbackText(value: unknown, count: number = 2) {
     if (typeof value !== "string" && typeof value !== "number") {
         return value;
     }
@@ -62,7 +64,7 @@ function getAvatarFallbackText(value: unknown) {
     const words = text.split(/\s+/).filter(Boolean);
 
     return words
-        .slice(0, 2)
+        .slice(0, count)
         .map((word) => Array.from(word)[0]?.toUpperCase() ?? "")
         .join("");
 }
@@ -70,6 +72,8 @@ function getAvatarFallbackText(value: unknown) {
 export function AvatarFallback({
     class: className,
     text,
+    charCount,
+    alwaysShow,
     children,
     ...props
 }: AvatarFallbackProps) {
@@ -77,12 +81,13 @@ export function AvatarFallback({
         <span
             data-slot="avatar-fallback"
             class={css(
-                "hidden size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
+                alwaysShow ? "flex" : "hidden",
+                "size-full justify-center items-center rounded-full bg-muted text-xs text-muted-foreground",
                 className,
             )}
             {...props}
         >
-            {getAvatarFallbackText(text ?? children)}
+            {children ?? getAvatarFallbackText(text, charCount)}
         </span>
     );
 }

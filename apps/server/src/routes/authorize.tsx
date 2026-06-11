@@ -3,6 +3,10 @@ import { Hono } from "hono";
 import z from "zod";
 import { pageValidator } from "@unbound/server/utils/validator";
 
+import { AuthorizePage } from "@unbound/web/pages/authorize";
+
+import { getFaviconBase64 } from "@unbound/server/utils";
+
 import type { AppEnv } from "@unbound/server";
 
 const ALLOWED_SCOPES = ["openid", "profile", "email"] as const;
@@ -88,7 +92,16 @@ app.get(
             return c.redirect(url);
         }
 
-        return c.render(<p>Placeholder</p>, { title: `Authorize` });
+        const { client_id, scope, redirect_uri } = c.req.valid("query");
+
+        const session = c.get("session");
+
+        const clientUrl = client_id.replace("origin:", "");
+        const clientIcon = await getFaviconBase64(new URL(clientUrl).origin);
+        const cancelUrl = new URL(redirect_uri);
+        cancelUrl.searchParams.set("error", "access_denied");
+
+        return c.render(<AuthorizePage session={session} clientId={clientUrl} scopes={scope} cancelUrl={cancelUrl.toString()} clientIcon={clientIcon}  />, { title: `Authorize` });
     },
 );
 

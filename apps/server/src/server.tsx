@@ -18,19 +18,6 @@ export type AppEnv = { Bindings: Env; Variables: Variables };
 const app = new Hono<AppEnv>();
 export type App = typeof app;
 
-// Patch for jsx render context to include title
-declare module "hono" {
-    interface ContextRenderer {
-        (
-            content: string | Promise<string>,
-            props: {
-                title: string;
-                empty?: boolean;
-            },
-        ): Response;
-    }
-}
-
 app.use("*", rendererMiddleware);
 app.use("*", setupMiddleware);
 app.use("*", sessionMiddleware);
@@ -54,7 +41,7 @@ app.get("/", (c) => {
                 <a href="/login?redirect_to=/">Click to login</a>
             )}
         </>,
-        { title: "Home" },
+        { title: "Home", isHomePage: true },
     );
 });
 

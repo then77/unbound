@@ -52,7 +52,7 @@ export function SetupPage({
     );
 
     return (
-        <main class="w-full min-h-screen flex justify-center py-24 px-8">
+        <main class="w-full min-h-screen flex justify-center py-24">
             <Empty>
                 <EmptyHeader>
                     <EmptyMedia>

@@ -52,7 +52,7 @@ app.get(
             <LoginPage
                 providers={providers}
                 redirect={redirect_to}
-                loggedin={c.get("isLoggedIn")()}
+                loggedIn={c.get("isLoggedIn")()}
             />,
             { title: "Login" },
         );

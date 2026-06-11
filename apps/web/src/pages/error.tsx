@@ -26,7 +26,7 @@ export function ErrorPage({
     showHome = true,
 }: ErrorPageProps) {
     return (
-        <div class="flex flex-1 justify-center items-center py-16">
+        <div class="flex flex-1 justify-center items-center pb-8">
             <Empty>
                 <EmptyHeader>
                     <EmptyMedia class="bg-warning-background mb-6">
@@ -83,18 +83,18 @@ export function ValidationPage({ messages }: { messages: string[] }) {
             you're the developer,{" "}
             <a
                 class="underline cursor-pointer"
-                onclick={`event.preventDefault();this.parentElement.querySelector('pre').removeAttribute("style")`}
+                onclick={`event.preventDefault(),(y=(x=this.parentElement.querySelector("pre")).parentElement).style.maxHeight&&"0px"!=y.style.maxHeight?(y.style.maxHeight="0px",y.style.opacity="1"):(y.style.maxHeight=x.offsetHeight+24+"px",y.style.opacity="1");`}
             >
                 click here for detail
             </a>
             .
             {messages.length > 0 && (
-                <pre
-                    style="display:none"
-                    class="w-full mt-6 overflow-x-auto rounded-lg p-4 text-sm leading-relaxed"
-                >
-                    {messages.join("\n")}
-                </pre>
+                <div class="open-transition">
+                    <div class="h-6" />
+                    <pre class="w-full overflow-x-auto rounded-lg p-4 text-sm leading-relaxed">
+                        {messages.join("\n")}
+                    </pre>
+                </div>
             )}
         </ErrorPage>
     );

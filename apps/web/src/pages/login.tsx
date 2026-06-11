@@ -21,7 +21,7 @@ import type { UserProvider } from "@unbound/types";
 type LoginPageProps = {
     providers: Record<UserProvider, boolean>;
     redirect?: string | null;
-    loggedin?: boolean;
+    loggedIn?: boolean;
 };
 
 function getClientOrigin(redirect: string): string | null {
@@ -41,7 +41,7 @@ function getClientOrigin(redirect: string): string | null {
     }
 }
 
-export function LoginPage({ providers, redirect, loggedin }: LoginPageProps) {
+export function LoginPage({ providers, redirect, loggedIn }: LoginPageProps) {
     let clientId = redirect ? getClientOrigin(redirect) : null;
 
     function make(provider: string) {
@@ -63,7 +63,7 @@ export function LoginPage({ providers, redirect, loggedin }: LoginPageProps) {
                         <Icon icon={UserRound} />
                     </EmptyMedia>
                     <EmptyTitle>
-                        {loggedin ? "Switch Account" : "Login Required"}
+                        {loggedIn ? "Switch Account" : "Welcome!"}
                     </EmptyTitle>
                     <EmptyDescription>
                         {clientId ? (

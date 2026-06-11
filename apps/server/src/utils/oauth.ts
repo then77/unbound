@@ -80,7 +80,6 @@ export function generateGoogleOauth(c: Context<AppEnv>) {
         clientId,
         redirectUri,
         ["profile", "email"],
-        { access_type: "offline" },
     );
 }
 
