@@ -87,7 +87,6 @@ export function AuthorizePage({
                     <code class="mr-0.5">{clientId}</code> is requesting access
                     to your info: {scopeEntries}
                 </EmptyDescription>
-                {/*<div class="w-16 h-px bg-muted mt-4" />*/}
             </EmptyHeader>
             <EmptyContent class="mt-2 max-w-md">
                 <Button

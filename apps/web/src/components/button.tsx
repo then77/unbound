@@ -18,7 +18,7 @@ export const buttonVariants = cva(
 
                 outline: "border-border bg-muted/30 hover:bg-muted/50",
 
-                danger: "bg-danger/10 text-danger hover:bg-danger/20 focus-visible:border-danger/40 focus-visible:ring-danger/20 dark:bg-danger/20 dark:hover:bg-danger/30 dark:focus-visible:ring-danger/40",
+                danger: "bg-danger hover:bg-danger/80",
             },
 
             size: {

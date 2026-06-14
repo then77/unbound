@@ -1,28 +1,28 @@
 import { Hono } from "hono";
 
+import { ProfilePage } from "@unbound/web/pages/profile";
+
 import type { AppEnv } from "@unbound/server";
 
 const app = new Hono<AppEnv>();
 
-app.get(
-    "/profile",
-    async (c) => {
-        if (!c.get("isLoggedIn")()) {
-            await c.get("setFlash")({
-                id: "profile",
-                type: "info",
-                message: "Please login first to continue.",
-            });
-            
-            return c.redirect("/login");
-        }
+app.get("/profile", async (c) => {
+    if (!c.get("isLoggedIn")()) {
+        await c.get("setFlash")({
+            id: "profile",
+            type: "info",
+            message: "Please login first to continue.",
+        });
 
-        return c.render(
-            <>Coming soon!</>,
-            { title: `Profile`, navbarState: "hide" },
-        );
-    },
-);
+        return c.redirect("/login");
+    }
+
+    const session = c.get("session")!;
+    return c.render(<ProfilePage session={session} />, {
+        title: `Profile`,
+        navbarState: "hide",
+    });
+});
 
 app.post("/logout", async (c) => {
     const setFlash = c.get("setFlash");

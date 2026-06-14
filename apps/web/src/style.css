@@ -58,7 +58,8 @@
 
     --font-sans: var(--sans);
 
-    --animate-buttonbar: buttonBarOut 1.3s cubic-bezier(.46,.03,.52,.96) forwards;
+    --animate-buttonbar: buttonBarOut 1.3s cubic-bezier(0.46, 0.03, 0.52, 0.96)
+        forwards;
 }
 
 html {
@@ -117,6 +118,42 @@ code {
 
 #flash[data-state="exit"] > div {
     animation: flashOut 0.3s ease forwards;
+}
+
+[data-slot="alert-dialog"] {
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear 0.16s;
+}
+
+[data-slot="alert-dialog"][data-state="open"] {
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+}
+
+[data-slot="alert-dialog-overlay"] {
+    opacity: 0;
+    transition: opacity 0.16s ease;
+}
+
+[data-slot="alert-dialog"][data-state="open"]
+    [data-slot="alert-dialog-overlay"] {
+    opacity: 1;
+}
+
+[data-slot="alert-dialog-content"] {
+    opacity: 0;
+    scale: 0.95;
+    transition:
+        opacity 0.16s ease,
+        scale 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-slot="alert-dialog"][data-state="open"]
+    [data-slot="alert-dialog-content"] {
+    opacity: 1;
+    scale: 1;
 }
 
 .open-transition {

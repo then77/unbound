@@ -22,7 +22,7 @@ export function Avatar({
             data-slot="avatar"
             data-size={size}
             class={css(
-                "group/avatar relative flex size-8 shrink-0 overflow-hidden rounded-full select-none data-[size=lg]:size-10 data-[size=sm]:size-6",
+                "group/avatar relative flex size-8 shrink-0 rounded-full select-none data-[size=lg]:size-10 data-[size=sm]:size-6",
                 className,
             )}
             {...props}
@@ -37,8 +37,24 @@ export function AvatarImage({
     return (
         <img
             data-slot="avatar-image"
-            class={css("aspect-square size-full", className)}
+            class={css("aspect-square size-full rounded-full", className)}
             onError={`this.style.display="none";this.parentElement.querySelector("[data-slot=avatar-fallback]").style.display="flex"`}
+            {...props}
+        />
+    );
+}
+
+export type AvatarBadgeProps = JSX.IntrinsicElements["span"];
+
+export function AvatarBadge({ class: className, ...props }: AvatarBadgeProps) {
+    return (
+        <span
+            data-slot="avatar-badge"
+            class={css(
+                "absolute -right-1 -bottom-1 z-10 inline-flex items-center justify-center rounded-full bg-muted text-card-foreground border-4 border-card select-none",
+                "p-1 [&>svg]:size-3 group-data-[size=lg]/avatar:size-5 group-data-[size=lg]/avatar:[&>svg]:size-3.5 group-data-[size=sm]/avatar:size-3.5 group-data-[size=sm]/avatar:[&>svg]:size-2.5",
+                className,
+            )}
             {...props}
         />
     );
