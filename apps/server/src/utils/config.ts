@@ -4,20 +4,22 @@ import {
 } from "@unbound/server/utils/generate";
 
 import type { Context } from "hono";
+import type { JWK } from "jose";
 import type { AppEnv } from "@unbound/server/server";
-import type { Env, SigningAlgorithm } from "@unbound/types";
+import type { Env as UnboundEnv, SigningAlgorithm } from "@unbound/types";
+import type { JSONObject } from "hono/utils/types";
 
 type CheckConfigResult = {
-    missing: (keyof Env)[];
-    errors: Partial<Record<keyof Env, string>>;
-    defaults: Partial<Record<keyof Env, string>>;
+    missing: (keyof UnboundEnv)[];
+    errors: Partial<Record<keyof UnboundEnv, string>>;
+    defaults: Partial<Record<keyof UnboundEnv, string>>;
 };
 
-type JsonObject = Record<string, unknown>;
+export type JWKWithKid = JSONObject & JWK & { kid: string };
 
 let cachedConfigResult: CheckConfigResult | null = null;
 
-export function parseJsonObject(value: string): JsonObject | null {
+export function parseJWK(value: string): JWKWithKid | null {
     try {
         const parsed: unknown = JSON.parse(value);
 
@@ -25,13 +27,13 @@ export function parseJsonObject(value: string): JsonObject | null {
             return null;
         }
 
-        return parsed as JsonObject;
+        return parsed as JWKWithKid;
     } catch {
         return null;
     }
 }
 
-export function validatePair(publicJwk: JsonObject, privateJwk: JsonObject) {
+export function validatePair(publicJwk: JWKWithKid, privateJwk: JWKWithKid) {
     function hasPairedKeys(keys: string[]) {
         return keys.every(
             (key) =>
@@ -46,17 +48,17 @@ export function validatePair(publicJwk: JsonObject, privateJwk: JsonObject) {
 
     switch (publicJwk.kty) {
         case "RSA":
-            return hasPairedKeys(["n", "e"]);
+            return hasPairedKeys(["n", "e", "kid"]);
         case "EC":
-            return hasPairedKeys(["x", "y"]);
+            return hasPairedKeys(["x", "y", "kid"]);
         case "OKP":
-            return hasPairedKeys(["x"]);
+            return hasPairedKeys(["x", "kid"]);
         default:
             return false;
     }
 }
 
-export function getJwkAlgorithm(jwk: JsonObject): SigningAlgorithm | null {
+export function getJwkAlgorithm(jwk: JWK): SigningAlgorithm | null {
     if (jwk.alg && typeof jwk.alg === "string") {
         return jwk.alg as SigningAlgorithm;
     }
@@ -96,30 +98,40 @@ export async function checkEnvConfiguration(
     if (cachedConfigResult) return cachedConfigResult;
 
     const result: CheckConfigResult = { missing: [], errors: {}, defaults: {} };
-    function missing(missing: keyof Env, defaultValue?: string) {
+    function missing(missing: keyof UnboundEnv, defaultValue?: string) {
         result.missing.push(missing);
         if (defaultValue) result.defaults[missing] = defaultValue;
     }
-    function errors(error: keyof Env, reason: string, defaultValue?: string) {
+    function errors(
+        error: keyof UnboundEnv,
+        reason: string,
+        defaultValue?: string,
+    ) {
         result.errors[error] = reason;
         if (defaultValue) result.defaults[error] = defaultValue;
     }
 
-    if (!c.env.SESSION_SECRET_KEY)
+    if (!c.env.SESSION_SECRET_KEY || c.env.SESSION_SECRET_KEY == "")
         missing("SESSION_SECRET_KEY", generateRandomString());
 
-    if (!c.env.JWK_PRIVATE_KEY || !c.env.JWK_PUBLIC_KEY) {
+    if (
+        !c.env.JWK_PRIVATE_KEY ||
+        !c.env.JWK_PUBLIC_KEY ||
+        c.env.JWK_PRIVATE_KEY == "" ||
+        c.env.JWK_PUBLIC_KEY == ""
+    ) {
         const jwks = await generateJWKPair();
         missing("JWK_PRIVATE_KEY", JSON.stringify(jwks.private));
         missing("JWK_PUBLIC_KEY", JSON.stringify(jwks.public));
     }
 
+    // Checks for missing jwk pair config, and validate
     if (c.env.JWK_PRIVATE_KEY && c.env.JWK_PUBLIC_KEY) {
         const privateJwk = c.env.JWK_PRIVATE_KEY
-            ? parseJsonObject(c.env.JWK_PRIVATE_KEY)
+            ? parseJWK(c.env.JWK_PRIVATE_KEY)
             : null;
         const publicJwk = c.env.JWK_PUBLIC_KEY
-            ? parseJsonObject(c.env.JWK_PUBLIC_KEY)
+            ? parseJWK(c.env.JWK_PUBLIC_KEY)
             : null;
 
         let jwkError: string | null = null;
@@ -136,36 +148,59 @@ export async function checkEnvConfiguration(
         }
 
         if (!jwkError) {
-            if (!getJwkAlgorithm(privateJwk!))
+            const privateJwkAlg = getJwkAlgorithm(privateJwk!);
+            const publicJwkAlg = getJwkAlgorithm(publicJwk!);
+            if (!privateJwkAlg)
                 errors(
                     "JWK_PRIVATE_KEY",
                     "Private JWK algorithm can't be determined.",
                 );
-            if (!getJwkAlgorithm(publicJwk!))
+            if (!publicJwkAlg)
                 errors(
                     "JWK_PUBLIC_KEY",
                     "Public JWK algorithm can't be determined.",
                 );
+            if (privateJwkAlg != publicJwkAlg) {
+                jwkError = "JWK algorithm mismatched.";
+                errors("JWK_PRIVATE_KEY", jwkError);
+                errors("JWK_PUBLIC_KEY", jwkError);
+            }
         }
     }
 
     // Checks missing pair of oauth client config
-    const providers = [
+    const providers: [string, keyof UnboundEnv, keyof UnboundEnv][] = [
         ["Google", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
         ["GitHub", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"],
         ["Discord", "DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"],
-    ] as const;
+    ];
     const oauthMissing = (x: string) =>
         `${x} auth requires both client id and secret to work.`;
-    
+
     for (const [name, idKey, secretKey] of providers) {
         const hasId = !!c.env[idKey];
         const hasSecret = !!c.env[secretKey];
-    
+
         if (hasId !== hasSecret) {
             const missingKey = hasId ? secretKey : idKey;
             missing(missingKey);
             errors(hasId ? idKey : secretKey, oauthMissing(name));
+        }
+    }
+
+    if (c.env.CLOUDFLARE_KV_NAMESPACE_ID) {
+        const kvMissing =
+            "Cloudflare kv config requires both account id and token to work.";
+        const checks: (keyof UnboundEnv)[] = [
+            "CLOUDFLARE_ACCOUNT_ID",
+            "CLOUDFLARE_API_TOKEN",
+        ];
+
+        for (const check of checks) {
+            if (!c.env[check]) {
+                missing(check);
+                errors(check, kvMissing);
+            }
         }
     }
 

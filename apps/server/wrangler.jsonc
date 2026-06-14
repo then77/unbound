@@ -1,0 +1,81 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "unbound-server",
+    "main": "src/server.tsx",
+    "compatibility_date": "2026-06-12",
+    "compatibility_flags": ["nodejs_compat"],
+    "observability": {
+        "enabled": true,
+    },
+    "upload_source_maps": true,
+    "assets": { "directory": "./public", "binding": "ASSETS" },
+
+    /**
+     * KV configuration
+     * For more details on how to configure this, refer to:
+     * https://docs.unbound.rlzy.me/getting-started#kv
+     */
+    
+    "kv_namespaces": [
+        {
+            "binding": "KV", // Must be "KV"
+            "id": "0123456789abcdef",
+        },
+    ],
+
+    /**
+     * Variables for running this app.
+     * For more details on how to configure this var, refer to:
+     * https://docs.unbound.rlzy.me/configuration
+     */
+    
+    "vars": {
+        
+        /**
+         * Required variables
+         * This variable are essential for session generation and authentication flow.
+         * If you dont have the right values for this yet, deploy first,
+         * open the deployed url, and follow the provided instruction. 
+         */
+        
+        "SESSION_SECRET_KEY": "",
+        "JWK_PUBLIC_KEY": "",
+        "JWK_PRIVATE_KEY": "",
+
+        /* --------------------------------------------------------------------------- */
+
+        /**
+         * Identity config variables
+         * One of these providers must be set and uncommented to allow user login.
+         * Both *_CLIENT_ID and *_CLIENT_SECRET must be set and uncommented together as pair.
+         * Available providers: GOOGLE, GITHUB, DISCORD 
+         */
+
+        "GOOGLE_CLIENT_ID": "",
+        "GOOGLE_CLIENT_SECRET": "",
+
+        // "GITHUB_CLIENT_ID": "",
+        // "GITHUB_CLIENT_SECRET": "",
+
+        // "DISCORD_CLIENT_ID": "",
+        // "DISCORD_CLIENT_SECRET": "",
+
+        /* --------------------------------------------------------------------------- */
+
+        /**
+         * Other config.
+         */
+
+        // "APP_NAME": "",
+        // "SESSION_COOKIE_NAME": "unbound_session",
+        // "SESSION_COOKIE_TTL": "604800",
+        // "AUTHORIZE_CODE_EXPIRATION": "120",
+        // "AUTHORIZE_CODE_KV_TTL": "600",
+        // "AUTHORIZE_TOKEN_EXPIRATION": "900"
+        
+    }
+}

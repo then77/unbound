@@ -27,9 +27,16 @@ export function generateRandomString(length = 32) {
     return result;
 }
 
+export function generateHash(
+    text: string,
+    encoding: "base64" | "base64url" | "hex" = "hex",
+) {
+    return createHash("sha256").update(text).digest(encoding);
+}
+
 export function generatePKCE() {
     const verifier = generateRandomString(64);
-    const challenge = createHash("sha256").update(verifier).digest("base64url");
+    const challenge = generateHash(verifier, "base64url");
 
     return { verifier, challenge };
 }

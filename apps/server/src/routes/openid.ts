@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-import { getJwkAlgorithm, parseJsonObject } from "@unbound/server/utils/config";
+import { getJwkAlgorithm, parseJWK } from "@unbound/server/utils/config";
 
 import type { AppEnv } from "@unbound/server";
 import type { OpenIDConfiguration } from "@unbound/types";
@@ -9,7 +9,7 @@ const app = new Hono<AppEnv>().basePath("/.well-known");
 
 app.get("/openid-configuration", async (c) => {
     const url = new URL(c.req.url);
-    const publicJwk = parseJsonObject(c.env.JWK_PUBLIC_KEY)!;
+    const publicJwk = parseJWK(c.env.JWK_PUBLIC_KEY)!;
     const signingAlg = getJwkAlgorithm(publicJwk)!;
 
     const config: OpenIDConfiguration = {
@@ -26,14 +26,25 @@ app.get("/openid-configuration", async (c) => {
         code_challenge_methods_supported: ["S256"],
         scopes_supported: ["openid", "profile", "email"],
         grant_types_supported: ["authorization_code"],
-        claims_supported: [], // TODO
+        claims_supported: [
+            "iss",
+            "sub",
+            "aud",
+            "iat",
+            "exp",
+            "name",
+            "picture",
+            "email",
+            "email_verified",
+            "nonce"
+        ],
     };
 
     return c.json(config);
 });
 
 app.get("/jwks.json", async (c) => {
-    const publicJwk = parseJsonObject(c.env.JWK_PUBLIC_KEY)!;
+    const publicJwk = parseJWK(c.env.JWK_PUBLIC_KEY)!;
     return c.json({ keys: [publicJwk] });
 });
 

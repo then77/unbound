@@ -1,7 +1,14 @@
 packages:
-  - apps/*
-  - packages/*
-  - scripts
+    - apps/*
+    - packages/*
+    - scripts
+
+# Pre approve builds
+onlyBuiltDependencies:
+    # For wrangler (cf worker)
+    - esbuild
+    - workerd
+    - sharp
 
 catalog:
-  hono: 4.12.23
+    hono: 4.12.23

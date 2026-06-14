@@ -17,12 +17,12 @@ import {
 import { Cog } from "@lucide/icons";
 import { Icon } from "@unbound/web/components/icon";
 
-import type { Env } from "@unbound/types";
+import type { Env as UnboundEnv } from "@unbound/types";
 
 type CheckConfigResult = {
-    missing: (keyof Env)[];
-    errors: Partial<Record<keyof Env, string>>;
-    defaults: Partial<Record<keyof Env, string>>;
+    missing: (keyof UnboundEnv)[];
+    errors: Partial<Record<keyof UnboundEnv, string>>;
+    defaults: Partial<Record<keyof UnboundEnv, string>>;
 };
 
 type SetupPageProps = {

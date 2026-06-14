@@ -6,13 +6,21 @@ import { Flash } from "@unbound/web/components/flash";
 import type { Session } from "@unbound/types";
 
 export type LayoutProps = PropsWithChildren<{
+    appName: string;
     title?: string | null;
     session?: Partial<Session> | null;
     empty?: boolean;
-    isHomePage?: boolean;
+    navbarState?: null | "show" | "hide";
 }>;
 
-export function Layout({ title, session, empty, isHomePage, children }: LayoutProps) {
+export function Layout({
+    appName,
+    title,
+    session,
+    empty,
+    navbarState,
+    children,
+}: LayoutProps) {
     return (
         <html class="antialiased">
             <head>
@@ -21,7 +29,7 @@ export function Layout({ title, session, empty, isHomePage, children }: LayoutPr
                     name="viewport"
                     content="width=device-width, initial-scale=1"
                 />
-                <title>{title ? `${title} - Unbound` : "Unbound"}</title>
+                <title>{title ? `${title} - ${appName}` : appName}</title>
                 <link rel="icon" href="/favicon.ico" />
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link
@@ -41,11 +49,16 @@ export function Layout({ title, session, empty, isHomePage, children }: LayoutPr
                     children
                 ) : (
                     <div class="w-full flex-1 max-w-6xl flex flex-col">
-                        <Navbar session={session} showLogin={isHomePage} />
+                        <Navbar appName={appName} session={session} navbarState={navbarState} />
                         <main class="flex flex-col w-full flex-1">
                             {children}
                         </main>
-                        <footer class="w-full h-12" />
+                        <footer class="w-full py-6 border-t border-muted text-sm text-muted-foreground">
+                            <p>
+                                &copy; {new Date().getFullYear()} Project
+                                Unbound.
+                            </p>
+                        </footer>
                     </div>
                 )}
             </body>

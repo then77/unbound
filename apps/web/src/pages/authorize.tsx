@@ -8,9 +8,6 @@ import {
 import {
     Card,
     CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
 } from "@unbound/web/components/card";
 import {
     Avatar,
@@ -59,24 +56,25 @@ export function AuthorizePage({
         i === 0 ? [<code>{scope}</code>] : [", ", <code>{scope}</code>],
     );
     return (
-        <Empty>
+        <Empty class="pb-16">
             <EmptyHeader>
                 <div class="flex flex-row justify-center items-center gap-3 mb-6">
                     <div class="bg-muted rounded-full p-2">
-                        <Avatar class="size-12">
+                        <Avatar class="size-14">
                             <AvatarImage
                                 src={session?.picture}
                                 referrerpolicy="no-referrer"
                             />
                             <AvatarFallback
                                 text={session?.name}
+                                class="text-lg"
                                 charCount={2}
                             />
                         </Avatar>
                     </div>
                     <DotLine />
                     <div class="bg-muted rounded-full p-2">
-                        <Avatar class="size-12">
+                        <Avatar class="size-14">
                             {clientIcon && <AvatarImage src={clientIcon} />}
                             <AvatarFallback alwaysShow={!clientIcon}>
                                 <Icon icon={Globe} size={36} />

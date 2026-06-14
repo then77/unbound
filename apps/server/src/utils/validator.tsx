@@ -29,6 +29,13 @@ type PageValidatorResult<
     P extends string = string,
 > = Parameters<PageValidatorHook<T, S, E, P>>[0];
 
+type PageValidatorErrorResult<
+    T extends keyof ValidationTargets,
+    S extends ZodSchema,
+    E extends Env = AppEnv,
+    P extends string = string,
+> = Extract<PageValidatorResult<T, S, E, P>, { success: false }>;
+
 type PageValidatorContext<
     T extends keyof ValidationTargets,
     S extends ZodSchema,
@@ -40,7 +47,7 @@ function isDefaultZodMessage(message: string): boolean {
     return /^Invalid .*:/.test(message);
 }
 
-function formatValidationMessages(
+export function formatValidationMessages(
     target: keyof ValidationTargets,
     issues: v4.$ZodIssue[] | v3.ZodIssue[],
 ): string[] {
@@ -114,7 +121,7 @@ export function pageValidator<
     target: T,
     schema: S,
     error?: (
-        result: PageValidatorResult<T, S, E, P>,
+        result: PageValidatorErrorResult<T, S, E, P>,
         c: PageValidatorContext<T, S, E, P>,
     ) => Response | void | Promise<Response | void>,
 ) {
@@ -139,4 +146,24 @@ export function pageValidator<
         schema,
         hook,
     );
+}
+
+export function tokenValidationError(
+    issues: v4.$ZodIssue[] | v3.ZodIssue[],
+    target: keyof ValidationTargets,
+) {
+    const messages = formatValidationMessages(target, issues);
+    const first = issues[0];
+
+    if (first?.path?.includes("grant_type")) {
+        return {
+            error: "unsupported_grant_type",
+            error_description: messages[0],
+        };
+    }
+
+    return {
+        error: "invalid_request",
+        error_description: messages[0] ?? "Invalid request",
+    };
 }

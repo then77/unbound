@@ -238,24 +238,4 @@ app.get(
     },
 );
 
-app.post("/logout", async (c) => {
-    const setFlash = c.get("setFlash");
-    if (!c.get("isLoggedIn")()) {
-        await setFlash({
-            id: "logout",
-            type: "error",
-            message: "You're not logged in.",
-        });
-    } else {
-        c.get("clearSession")();
-        await setFlash({
-            id: "logout",
-            type: "success",
-            message: "Successfully logged out.",
-        });
-    }
-
-    return c.redirect("/");
-});
-
 export default app;

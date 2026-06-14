@@ -56,56 +56,54 @@ export function LoginPage({ providers, redirect, loggedIn }: LoginPageProps) {
     }
 
     return (
-        <div class="flex flex-1 justify-center items-center pb-8">
-            <Empty>
-                <EmptyHeader>
-                    <EmptyMedia>
-                        <Icon icon={UserRound} />
-                    </EmptyMedia>
-                    <EmptyTitle>
-                        {loggedIn ? "Switch Account" : "Welcome!"}
-                    </EmptyTitle>
-                    <EmptyDescription>
-                        {clientId ? (
-                            <>
-                                Choose your identity to continue authorize to{" "}
-                                <code class="whitespace-nowrap ml-0.5">
-                                    {clientId}
-                                </code>
-                            </>
-                        ) : (
-                            "Choose your identity to continue."
-                        )}
-                    </EmptyDescription>
-                    <div class="w-16 h-px bg-muted mt-4" />
-                </EmptyHeader>
-                <EmptyContent>
-                    {providers.google && (
-                        <Button asChild={true} variant="outline" class="w-full">
-                            <a href={make("google")}>
-                                <GoogleLogo size={24} />
-                                Login with Google
-                            </a>
-                        </Button>
+        <Empty class="pb-16">
+            <EmptyHeader>
+                <EmptyMedia>
+                    <Icon icon={UserRound} />
+                </EmptyMedia>
+                <EmptyTitle>
+                    {loggedIn ? "Switch Account" : "Welcome!"}
+                </EmptyTitle>
+                <EmptyDescription>
+                    {clientId ? (
+                        <>
+                            Choose your identity to continue authorize to{" "}
+                            <code class="whitespace-nowrap ml-0.5">
+                                {clientId}
+                            </code>
+                        </>
+                    ) : (
+                        "Choose your identity to continue."
                     )}
-                    {providers.github && (
-                        <Button asChild={true} variant="outline" class="w-full">
-                            <a href={make("github")}>
-                                <GithubLogo size={24} />
-                                Login with Github
-                            </a>
-                        </Button>
-                    )}
-                    {providers.discord && (
-                        <Button asChild={true} variant="outline" class="w-full">
-                            <a href={make("discord")}>
-                                <DiscordLogo size={24} />
-                                Login with Discord
-                            </a>
-                        </Button>
-                    )}
-                </EmptyContent>
-            </Empty>
-        </div>
+                </EmptyDescription>
+                <div class="w-16 h-px bg-muted mt-4" />
+            </EmptyHeader>
+            <EmptyContent>
+                {providers.google && (
+                    <Button asChild={true} variant="outline" class="w-full">
+                        <a href={make("google")}>
+                            <GoogleLogo size={24} />
+                            Login with Google
+                        </a>
+                    </Button>
+                )}
+                {providers.github && (
+                    <Button asChild={true} variant="outline" class="w-full">
+                        <a href={make("github")}>
+                            <GithubLogo size={24} />
+                            Login with Github
+                        </a>
+                    </Button>
+                )}
+                {providers.discord && (
+                    <Button asChild={true} variant="outline" class="w-full">
+                        <a href={make("discord")}>
+                            <DiscordLogo size={24} />
+                            Login with Discord
+                        </a>
+                    </Button>
+                )}
+            </EmptyContent>
+        </Empty>
     );
 }
