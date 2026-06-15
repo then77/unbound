@@ -1,0 +1,40 @@
+import { jsxRenderer } from "hono/jsx-renderer";
+
+import { Layout } from "@unbound/web/layout";
+
+import type { Context } from "hono";
+import type { AppEnv } from "@unbound/server/server";
+
+// Patch for jsx render context to include title
+declare module "hono" {
+    interface ContextRenderer {
+        (
+            content: string | Promise<string>,
+            props: {
+                title: string;
+                empty?: boolean;
+                navbarState?: null | "show" | "hide";
+            },
+        ): Response;
+    }
+}
+
+export const rendererMiddleware = jsxRenderer(
+    ({ children, title, empty, navbarState }, c: Context<AppEnv>) => {
+        const session = c.get("session");
+        const appName =
+            c.env.APP_NAME && c.env.APP_NAME != "" ? c.env.APP_NAME : "Unbound";
+
+        return (
+            <Layout
+                appName={appName}
+                title={title}
+                session={session}
+                empty={empty}
+                navbarState={navbarState}
+            >
+                {children}
+            </Layout>
+        );
+    },
+);

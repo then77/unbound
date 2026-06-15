@@ -1,3 +1,177 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+:root {
+    --background: #0d0c13;
+    --foreground: #f0f0f0;
+
+    --primary: #31257e;
+    --primary-foreground: #9b90df;
+    --primary-background: #19133f;
+
+    --success: #178c46;
+    --success-foreground: #73e8a2;
+    --success-background: #08391c;
+
+    --warning: #bf862a;
+    --warning-foreground: #edd4bb;
+    --warning-background: #32230b;
+
+    --danger: #e7292f;
+    --danger-foreground: #f7b6b8;
+    --danger-background: #470f0f;
+
+    --card: #0e0e17;
+    --muted: #282828;
+    --muted-foreground: #a0a0a0;
+    --border: #2a2638;
+
+    --sans:
+        "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        "Noto Color Emoji";
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-background: var(--primary-background);
+
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-success-background: var(--success-background);
+
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-warning-background: var(--warning-background);
+
+    --color-danger: var(--danger);
+    --color-danger-foreground: var(--danger-foreground);
+    --color-danger-background: var(--danger-background);
+
+    --color-card: var(--card);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-border: var(--border);
+
+    --font-sans: var(--sans);
+
+    --animate-buttonbar: buttonBarOut 1.3s cubic-bezier(0.46, 0.03, 0.52, 0.96)
+        forwards;
+}
+
+html {
+    background-color: var(--background);
+    color: var(--foreground);
+}
+
+pre {
+    border: 1px solid var(--color-border);
+    background-color: color-mix(in srgb, var(--color-muted) 50%, transparent);
+    color: var(--color-muted-foreground);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+
+code {
+    background-color: color-mix(in srgb, var(--color-muted) 50%, transparent);
+    color: var(--color-muted-foreground);
+    border-radius: var(--radius-sm);
+    padding: 1px 6px;
+}
+
+@keyframes flashIn {
+    from {
+        transform: translateY(-40px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes flashOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes buttonBarOut {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+
+#flash > div {
+    opacity: 0;
+    animation: flashIn 0.3s cubic-bezier(0.19, 1, 0.75, 1) forwards;
+}
+
+#flash[data-state="exit"] > div {
+    animation: flashOut 0.3s ease forwards;
+}
+
+[data-slot="alert-dialog"] {
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear 0.16s;
+}
+
+[data-slot="alert-dialog"][data-state="open"] {
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+}
+
+[data-slot="alert-dialog-overlay"] {
+    opacity: 0;
+    transition: opacity 0.16s ease;
+}
+
+[data-slot="alert-dialog"][data-state="open"]
+    [data-slot="alert-dialog-overlay"] {
+    opacity: 1;
+}
+
+[data-slot="alert-dialog-content"] {
+    opacity: 0;
+    scale: 0.95;
+    transition:
+        opacity 0.16s ease,
+        scale 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-slot="alert-dialog"][data-state="open"]
+    [data-slot="alert-dialog-content"] {
+    opacity: 1;
+    scale: 1;
+}
+
+.open-transition {
+    transition:
+        opacity 0.2s ease,
+        max-height 0.2s ease;
+    opacity: 0;
+    max-height: 0px;
+    overflow-y: clip;
+}
+
+svg.dot-line circle {
+    animation: var(--animate-pulse);
+    animation-duration: 3s;
+}
+svg.dot-line circle:nth-child(2) {
+    animation-delay: 0.2s;
+}
+svg.dot-line circle:nth-child(3) {
+    animation-delay: 0.4s;
+}

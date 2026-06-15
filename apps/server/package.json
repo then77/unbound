@@ -5,14 +5,24 @@
     "private": true,
     "packageManager": "pnpm@10.14.0",
     "scripts": {
-        "dev": "tsx watch ./src/server.ts"
+        "dev": "tsx watch ./src/server.tsx --tsconfig ./tsconfig.json",
+        "lint": "tsc --noEmit --project ./tsconfig.json",
+        "cf-typegen": "wrangler types",
+        "deploy:cf": "wrangler deploy"
     },
     "dependencies": {
+        "@hapi/iron": "^7.0.1",
         "@hono/node-server": "^2.0.4",
-        "hono": "^4.12.23"
+        "@hono/zod-validator": "^0.8.0",
+        "dotenv": "^17.4.2",
+        "hono": "catalog:",
+        "jose": "^6.2.3",
+        "ky": "^2.0.2",
+        "zod": "^4.4.3"
     },
     "devDependencies": {
         "@types/node": "^25.9.1",
-        "tsx": "^4.22.4"
+        "tsx": "^4.22.4",
+        "wrangler": "^4.100.0"
     }
 }
