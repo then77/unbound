@@ -21,7 +21,10 @@ import type { OauthStart, OauthResult } from "@unbound/server/utils/oauth";
 import type { UserProvider } from "@unbound/types";
 
 const authQuerySchema = z.object({
-    redirect_to: z.string().startsWith("/").optional(),
+    redirect_to: z
+        .string()
+        .regex(/^\/(?!\/)/)
+        .optional(),
 });
 const callbackQuerySchema = z.object({
     code: z.string().min(1),
@@ -173,7 +176,11 @@ app.get(
         let result: OauthResult;
         const finishCallbacks: Record<
             typeof provider,
-            (context: typeof c, code: string, state: string) => Promise<OauthResult>
+            (
+                context: typeof c,
+                code: string,
+                state: string,
+            ) => Promise<OauthResult>
         > = {
             google: finishGoogleOauth,
             github: finishGithubOauth,

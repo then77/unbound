@@ -116,8 +116,8 @@ export async function createAuthCode(
         data.code_challenge ?? 0,
         data.code_challenge_method ?? 0,
         data.nonce ?? 0,
-        Date.now() + (getAuthorizeTtl(c.env.AUTHORIZE_CODE_EXPIRATION) * 1000),
-    ].join("|");
+        Date.now() + getAuthorizeTtl(c.env.AUTHORIZE_CODE_EXPIRATION) * 1000,
+    ].join("\x1f");
 
     try {
         const {
@@ -197,7 +197,7 @@ export async function decodeAuthCode(
         codeChallengeMethodOrZero,
         nonceOrZero,
         expirationStr,
-    ] = payload.split("|");
+    ] = payload.split("\x1f");
 
     const client_id = "origin:" + new URL(redirect_uri).origin;
 

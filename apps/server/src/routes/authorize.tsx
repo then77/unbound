@@ -53,7 +53,10 @@ export const authorizeQuerySchema = z
 
         code_challenge_method: z.literal("S256").optional(),
 
-        nonce: z.string().optional(),
+        nonce: z
+            .string()
+            .regex(/^[A-Za-z0-9\-_]+$/, "nonce must use base64url format")
+            .optional(),
     })
     .superRefine((data, ctx) => {
         const scopes = [...new Set(data.scope)];
