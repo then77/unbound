@@ -5,6 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "pnpm run dev:css",
+        "lint": "tsc --noEmit --project ./tsconfig.json",
         "build": "pnpm run build:css",
         "build:css": "tailwindcss -i src/style.css -o ../server/public/style.css --content \"./src/**/*.{html,js,ts,jsx,tsx}\"",
         "dev:css": "tailwindcss -i src/style.css -o ../server/public/style.css --content \"./src/**/*.{html,js,ts,jsx,tsx}\" --watch"

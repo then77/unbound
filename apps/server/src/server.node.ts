@@ -42,7 +42,7 @@ export function startNodeServer(app: App) {
             app.fetch(request, {
                 ...nodeBindings,
                 ...process.env,
-            } as AppEnv["Bindings"]),
+            } as unknown as AppEnv["Bindings"]),
         port: Number(process.env.PORT ?? 8080),
     });
 

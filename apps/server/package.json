@@ -6,8 +6,9 @@
     "packageManager": "pnpm@10.14.0",
     "scripts": {
         "dev": "tsx watch ./src/server.tsx --tsconfig ./tsconfig.json",
+        "lint": "tsc --noEmit --project ./tsconfig.json",
         "cf-typegen": "wrangler types",
-        "deploy": "wrangler deploy"
+        "deploy:cf": "wrangler deploy"
     },
     "dependencies": {
         "@hapi/iron": "^7.0.1",
