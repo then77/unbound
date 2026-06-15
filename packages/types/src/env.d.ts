@@ -16,7 +16,7 @@ export interface Env {
 
     APP_NAME?: string | null;
     SESSION_COOKIE_NAME?: string | null;
-    SESSION_TTL?: `${number}` | null; // in seconds
+    SESSION_COOKIE_TTL?: `${number}` | null; // in seconds
     AUTHORIZE_CODE_EXPIRATION?: `${number}` | null; // in seconds
     AUTHORIZE_CODE_KV_TTL?: `${number}` | null; // in seconds
     AUTHORIZE_TOKEN_EXPIRATION?: `${number}` | null; // in seconds

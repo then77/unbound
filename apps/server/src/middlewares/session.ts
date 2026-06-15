@@ -29,7 +29,7 @@ export const sessionMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 
     const sealOptions: Iron.SealOptions = {
         ...Iron.defaults,
-        ttl: getSessionTtl(c.env.SESSION_TTL) * 1000,
+        ttl: getSessionTtl(c.env.SESSION_COOKIE_TTL) * 1000,
     };
 
     if (cookie) {
@@ -102,6 +102,6 @@ export const sessionMiddleware = createMiddleware<AppEnv>(async (c, next) => {
         secure: true,
         sameSite: "lax",
         path: "/",
-        maxAge: getSessionTtl(c.env.SESSION_TTL),
+        maxAge: getSessionTtl(c.env.SESSION_COOKIE_TTL),
     });
 });
