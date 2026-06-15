@@ -63,7 +63,7 @@ app.notFound(async (c) => {
     return c.render(<NotFoundPage />, { title: "404" });
 })
 
-app.onError(async (err, c) => {
+app.onError(async (_, c) => {
     return c.render(
         <ErrorPage showRetry={true}>
             An error occurred while processing this request. Please try again
