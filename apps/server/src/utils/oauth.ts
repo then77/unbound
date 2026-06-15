@@ -46,9 +46,9 @@ export function generateOauthUrl(
 
 function getOauthSession(c: Context<AppEnv>) {
     const session = c.get("session");
-    if (!session || !session.login_method || !session.login_verifier)
+    if (!session || !session.login_method || !session.login_state || !session.login_verifier)
         return null;
-    return { method: session.login_method, verifier: session.login_verifier };
+    return { method: session.login_method, state: session.login_state, verifier: session.login_verifier };
 }
 
 function getErrorMessage(error: unknown) {
@@ -114,6 +114,7 @@ export function generateDiscordOauth(c: Context<AppEnv>) {
 export async function finishGoogleOauth(
     c: Context<AppEnv>,
     code: string,
+    state: string,
 ): Promise<OauthResult> {
     const clientId = c.env.GOOGLE_CLIENT_ID;
     const clientSecret = c.env.GOOGLE_CLIENT_SECRET;
@@ -125,7 +126,7 @@ export async function finishGoogleOauth(
     const oauthSession = getOauthSession(c);
 
     if (!oauthSession) throw new OauthError("google", "MISSING_LOGIN_SESSION");
-    if (oauthSession.method != "google")
+    if (oauthSession.method != "google" || oauthSession.state != state)
         throw new OauthError("google", "INVALID_LOGIN_SESSION");
 
     const { access_token } = await handleOauthError(
@@ -180,6 +181,7 @@ export async function finishGoogleOauth(
 export async function finishGithubOauth(
     c: Context<AppEnv>,
     code: string,
+    state: string,
 ): Promise<OauthResult> {
     const clientId = c.env.GITHUB_CLIENT_ID;
     const clientSecret = c.env.GITHUB_CLIENT_SECRET;
@@ -191,7 +193,7 @@ export async function finishGithubOauth(
     const oauthSession = getOauthSession(c);
 
     if (!oauthSession) throw new OauthError("github", "MISSING_LOGIN_SESSION");
-    if (oauthSession.method != "github")
+    if (oauthSession.method != "github" || oauthSession.state != state)
         throw new OauthError("github", "INVALID_LOGIN_SESSION");
 
     const { access_token } = await handleOauthError(
@@ -264,6 +266,7 @@ export async function finishGithubOauth(
 export async function finishDiscordOauth(
     c: Context<AppEnv>,
     code: string,
+    state: string,
 ): Promise<OauthResult> {
     const clientId = c.env.DISCORD_CLIENT_ID;
     const clientSecret = c.env.DISCORD_CLIENT_SECRET;
@@ -275,7 +278,7 @@ export async function finishDiscordOauth(
     const oauthSession = getOauthSession(c);
 
     if (!oauthSession) throw new OauthError("discord", "MISSING_LOGIN_SESSION");
-    if (oauthSession.method != "discord")
+    if (oauthSession.method != "discord" || oauthSession.state != state)
         throw new OauthError("discord", "INVALID_LOGIN_SESSION");
 
     const { access_token } = await handleOauthError(

@@ -132,6 +132,7 @@ app.get(
         await setSession({
             login_method: provider,
             login_redirect: redirect_to,
+            login_state: result.state,
             login_verifier: result.verifier,
         });
 
@@ -154,7 +155,7 @@ app.get(
         if (!["google", "github", "discord"].includes(provider))
             return c.notFound();
 
-        const { code } = c.req.valid("query");
+        const { code, state } = c.req.valid("query");
 
         const isLoggedIn = c.get("isLoggedIn");
         const setSession = c.get("setSession");
@@ -162,8 +163,9 @@ app.get(
 
         async function clearLoginSession() {
             await setSession({
-                login_method: undefined,
+                login_method: null,
                 login_redirect: null,
+                login_state: null,
                 login_verifier: null,
             });
         }
@@ -171,7 +173,7 @@ app.get(
         let result: OauthResult;
         const finishCallbacks: Record<
             typeof provider,
-            (context: typeof c, code: string) => Promise<OauthResult>
+            (context: typeof c, code: string, state: string) => Promise<OauthResult>
         > = {
             google: finishGoogleOauth,
             github: finishGithubOauth,
@@ -179,7 +181,7 @@ app.get(
         };
 
         try {
-            result = await finishCallbacks[provider](c, code);
+            result = await finishCallbacks[provider](c, code, state);
         } catch (error) {
             if (error instanceof OauthError) {
                 const name = provider[0].toUpperCase() + provider.slice(1);

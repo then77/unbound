@@ -27,6 +27,7 @@ export type Session = User & {
     // For temporary store login flow info
     login_redirect?: string | null;
     login_method?: string | null;
+    login_state?: string | null;
     login_verifier?: string | null;
 };
 
