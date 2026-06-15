@@ -72,6 +72,13 @@ jobs:
               working-directory: apps/web
               run: pnpm run build
 
+            - name: "Adjust wrangler config before deploy"
+              working-directory: apps/server
+              run: |
+                  perl -0777 -pe 's|/\*.*?\*/||gs; s|//[^\n]*||g; s/,(\s*[}\]])/\1/g' wrangler.jsonc \
+                    | jq '.vars = {}' > wrangler.json
+                  rm wrangler.jsonc
+
             - name: "Deploy to Cloudflare"
               working-directory: apps/server
               env:
