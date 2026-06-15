@@ -2,6 +2,16 @@ name: "CI: Production"
 
 on:
     workflow_dispatch:
+        inputs:
+            target:
+                description: "What to build"
+                required: true
+                default: "all"
+                type: choice
+                options:
+                    - all
+                    - server
+                    - web
     push:
         branches:
             - master
@@ -41,10 +51,15 @@ jobs:
     build-unbound:
         name: "Build: Unbound App"
         needs: changes
-        if: ${{ needs.changes.outputs.server == 'true' || needs.changes.outputs.web == 'true' }}
         runs-on: ubuntu-latest
         environment:
             name: production
+
+        if: ${{ (
+            github.event_name == 'push' && (needs.changes.outputs.server == 'true' || needs.changes.outputs.web == 'true')
+            ) || (
+            github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'server')
+            ) }}
 
         steps:
             - name: "Checkout"
