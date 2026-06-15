@@ -9,7 +9,7 @@ class ApiKV implements KVStore {
 
     constructor(env: UnboundEnv) {
         this.client = ky.create({
-            prefix: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${env.CLOUDFLARE_KV_NAMESPACE_ID}/values`,
+            baseUrl: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${env.CLOUDFLARE_KV_NAMESPACE_ID}/values`,
 
             headers: {
                 Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
