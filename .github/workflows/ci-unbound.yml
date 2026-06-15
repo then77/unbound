@@ -1,0 +1,44 @@
+name: CI Unbound
+
+on:
+    workflow_dispatch:
+    push:
+        branches:
+            - master
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        if: github.repository == "then77/unbound"
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10.14.0
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: pnpm
+
+            - name: Build web (CSS)
+              working-directory: apps/web
+              run: |
+                  pnpm install
+                  pnpm run build
+
+            - name: Deploy server
+              working-directory: apps/server
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_SECRET }}
+              run: |
+                  pnpm install
+                  pnpm run deploy
