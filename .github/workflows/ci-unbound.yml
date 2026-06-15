@@ -1,4 +1,4 @@
-name: CI Unbound
+name: CI Unbound (Production)
 
 on:
     workflow_dispatch:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
     build:
-        if: github.repository == "then77/unbound"
+        if: github.repository == 'then77/unbound'
         runs-on: ubuntu-latest
 
         steps:
