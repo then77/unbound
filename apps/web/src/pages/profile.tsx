@@ -61,7 +61,7 @@ export function ProfilePage({ session }: ProfilePageProps) {
                 <EmptyContent class="max-w-lg">
                     <Card class="w-full p-6">
                         <CardContent class="flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-left">
-                            <Avatar class="size-12 sm:size-16 mb-4 sm:mb-0">
+                            <Avatar class="size-12 sm:size-16 mb-3 sm:mb-0">
                                 <AvatarImage
                                     src={session?.picture}
                                     referrerpolicy="no-referrer"
@@ -107,7 +107,7 @@ export function ProfilePage({ session }: ProfilePageProps) {
                             <div class="flex flex-col gap-2 sm:gap-4">
                                 <div class="flex flex-row gap-x-2 sm:flex-col">
                                     <h2 class="font-semibold sm:text-base">
-                                        Email verified?
+                                        Email Verified?
                                     </h2>
                                     <p class="text-muted-foreground">
                                         {session.email_verified?.toString()}
@@ -115,7 +115,7 @@ export function ProfilePage({ session }: ProfilePageProps) {
                                 </div>
                                 <div>
                                     <h2 class="font-semibold sm:text-base mb-1 sm:mb-0">
-                                        User ID
+                                        {capitalize(session?.provider ?? "user")} ID
                                     </h2>
                                     <p class="text-muted-foreground">
                                         <code>{session.sub}</code>

@@ -143,7 +143,7 @@ export function AlertDialogAction({
             data-slot="alert-dialog-action"
             variant={variant}
             size={size}
-            class={css("cursor-pointer", className)}
+            class={css("cursor-pointer shrink-0 sm:flex-1", className)}
             {...props}
         />
     );
@@ -162,7 +162,7 @@ export function AlertDialogCancel({
             type="button"
             variant={variant}
             size={size}
-            class={css("cursor-pointer", className)}
+            class={css("cursor-pointer shrink-0 sm:flex-1", className)}
             {...props}
         />
     );

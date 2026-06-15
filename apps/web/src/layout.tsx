@@ -43,7 +43,7 @@ export function Layout({
                 />
                 <link rel="stylesheet" href="/style.css" />
             </head>
-            <body class="flex flex-col items-center min-h-screen px-8">
+            <body class="flex flex-col items-center min-h-svh px-8">
                 {session?.flash && <Flash flash={session.flash} />}
                 {empty ? (
                     children

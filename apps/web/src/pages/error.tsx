@@ -10,7 +10,12 @@ import {
 } from "@unbound/web/components/empty";
 import { Button } from "@unbound/web/components/button";
 
-import { CircleAlert, RotateCw, House } from "@lucide/icons";
+import {
+    CircleAlert,
+    CircleQuestionMark,
+    RotateCw,
+    House,
+} from "@lucide/icons";
 import { Icon } from "@unbound/web/components/icon";
 
 import type { PropsWithChildren } from "hono/jsx";
@@ -97,5 +102,35 @@ export function ValidationPage({ messages }: { messages: string[] }) {
                 </div>
             )}
         </ErrorPage>
+    );
+}
+
+export function NotFoundPage() {
+    return (
+        <div class="flex flex-1 justify-center items-center pb-8">
+            <Empty>
+                <EmptyHeader>
+                    <EmptyMedia class="bg-warning-background mb-6">
+                        <Icon icon={CircleQuestionMark} class="text-warning" />
+                    </EmptyMedia>
+                    <EmptyTitle>404 Not Found</EmptyTitle>
+                    <EmptyDescription>
+                        This page does not exist. Check the url and try again.
+                    </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent class="max-w-xs flex-row justify-center mt-8">
+                    <Button
+                        asChild={true}
+                        variant="outline"
+                        class="cursor-pointer"
+                    >
+                        <a href="/">
+                            <Icon icon={House} />
+                            Back to Home
+                        </a>
+                    </Button>
+                </EmptyContent>
+            </Empty>
+        </div>
     );
 }

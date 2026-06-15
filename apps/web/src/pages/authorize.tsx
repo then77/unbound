@@ -112,7 +112,7 @@ export function AuthorizePage({
                                     </h2>
                                     <p class="text-muted-foreground">
                                         View your unique identity ID for{" "}
-                                        <code class="ml-0.5 whitespace-nowrap">
+                                        <code class="ml-0.5 sm:whitespace-nowrap">
                                             {clientId}
                                         </code>
                                     </p>

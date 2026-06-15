@@ -6,6 +6,8 @@ import { rendererMiddleware } from "@unbound/server/middlewares/renderer";
 import { setupMiddleware } from "@unbound/server/middlewares/setup";
 import { sessionMiddleware } from "@unbound/server/middlewares/session";
 
+import { ErrorPage, NotFoundPage } from "@unbound/web/pages/error";
+
 import openIdRoutes from "@unbound/server/routes/openid";
 import loginRoutes from "@unbound/server/routes/login";
 import profileRoutes from "@unbound/server/routes/profile";
@@ -36,7 +38,12 @@ app.get("/", (c) => {
                 <p>
                     As: {session!.name} ({session!.email}).
                     <form action="/logout" method="post">
-                        <a href="/logout" onclick="event.preventDefault();this.closest('form').submit();">Click to logout</a>
+                        <a
+                            href="/logout"
+                            onclick="event.preventDefault();this.closest('form').submit();"
+                        >
+                            Click to logout
+                        </a>
                     </form>
                 </p>
             ) : (
@@ -51,6 +58,22 @@ app.route("/", openIdRoutes);
 app.route("/", loginRoutes);
 app.route("/", profileRoutes);
 app.route("/", authorizeRoutes);
+
+app.notFound(async (c) => {
+    return c.render(<NotFoundPage />, { title: "404" });
+})
+
+app.onError(async (err, c) => {
+    return c.render(
+        <ErrorPage showRetry={true}>
+            An error occurred while processing this request. Please try again
+            later.
+        </ErrorPage>,
+        {
+            title: "Oops!",
+        },
+    );
+});
 
 export default app;
 
