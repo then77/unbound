@@ -121,7 +121,7 @@ app.get(
                     id: "login",
                     type: "error",
                     message:
-                        "Unknown error occured when logging in. Please try again.",
+                        "Unknown error occurred when logging in. Please try again.",
                 });
             }
 
@@ -214,7 +214,7 @@ app.get(
                     id: "login",
                     type: "error",
                     message:
-                        "Unknown error occured when logging in. Please try again.",
+                        "Unknown error occurred when logging in. Please try again.",
                 });
             }
 

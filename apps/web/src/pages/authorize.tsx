@@ -5,10 +5,7 @@ import {
     EmptyHeader,
     EmptyTitle,
 } from "@unbound/web/components/empty";
-import {
-    Card,
-    CardContent,
-} from "@unbound/web/components/card";
+import { Card, CardContent } from "@unbound/web/components/card";
 import {
     Avatar,
     AvatarImage,
@@ -184,11 +181,11 @@ export function AuthorizePage({
                 </div>
                 <div class="w-full flex flex-col-reverse sm:flex-row justify-center mt-4 gap-2.5">
                     <Button
+                        asChild={true}
                         variant="outline"
                         class="shrink-0 sm:flex-1 cursor-pointer"
-                        onclick={`window.location.href='${cancelUrl}'`}
                     >
-                        Cancel
+                        <a href={cancelUrl}>Cancel</a>
                     </Button>
                     <form class="contents" method="post">
                         <input type="hidden" name="result" value="allow" />

@@ -60,7 +60,7 @@ export function SetupPage({
                     </EmptyMedia>
                     <EmptyTitle>Setup Required</EmptyTitle>
                     <EmptyDescription>
-                        This server has not completed it's setup yet. If you're
+                        This server has not completed its setup yet. If you're
                         the server owner/admin, please follow these steps:
                     </EmptyDescription>
                     <div class="w-16 h-px bg-muted mt-4" />

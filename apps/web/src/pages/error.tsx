@@ -90,7 +90,7 @@ export function ValidationPage({ messages }: { messages: string[] }) {
                 class="underline cursor-pointer"
                 onclick={`event.preventDefault(),(y=(x=this.parentElement.querySelector("pre")).parentElement).style.maxHeight&&"0px"!=y.style.maxHeight?(y.style.maxHeight="0px",y.style.opacity="1"):(y.style.maxHeight=x.offsetHeight+24+"px",y.style.opacity="1");`}
             >
-                click here for detail
+                click here for details
             </a>
             .
             {messages.length > 0 && (
