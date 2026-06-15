@@ -76,4 +76,4 @@ jobs:
               working-directory: apps/server
               env:
                   CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_SECRET }}
-              run: pnpm run deploy
+              run: pnpm run deploy:cf
