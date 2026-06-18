@@ -11,6 +11,7 @@ export type LayoutProps = PropsWithChildren<{
     session?: Partial<Session> | null;
     empty?: boolean;
     navbarState?: null | "show" | "hide";
+    nextVersion?: boolean;
 }>;
 
 export function Layout({
@@ -19,6 +20,7 @@ export function Layout({
     session,
     empty,
     navbarState,
+    nextVersion,
     children,
 }: LayoutProps) {
     return (
@@ -44,6 +46,14 @@ export function Layout({
                 <link rel="stylesheet" href="/style.css" />
             </head>
             <body class="flex flex-col items-center min-h-svh px-8">
+                {nextVersion && (
+                    <>
+                        <div class="fixed top-0 left-0 z-9999 w-full bg-warning-background/50 p-2 px-8 text-center text-sm text-warning-foreground">
+                            Heads up! This is <b>Unbound Next</b> (wip) version, and might contains unfinished/buggy feature. Do not use for production!
+                        </div>
+                        <div class="h-6" />
+                    </>
+                )}
                 {session?.flash && <Flash flash={session.flash} />}
                 {empty ? (
                     children

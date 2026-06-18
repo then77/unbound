@@ -24,6 +24,9 @@ export const rendererMiddleware = jsxRenderer(
         const session = c.get("session");
         const appName =
             c.env.APP_NAME && c.env.APP_NAME != "" ? c.env.APP_NAME : "Unbound";
+        const nextVersion = (c.env as any).NEXT_VERSION
+            ? Boolean((c.env as any).NEXT_VERSION)
+            : false;
 
         return (
             <Layout
@@ -32,6 +35,7 @@ export const rendererMiddleware = jsxRenderer(
                 session={session}
                 empty={empty}
                 navbarState={navbarState}
+                nextVersion={nextVersion}
             >
                 {children}
             </Layout>
