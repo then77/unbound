@@ -7,8 +7,8 @@
     "scripts": {
         "dev": "tsx watch ./src/server.tsx --tsconfig ./tsconfig.json",
         "lint": "tsc --noEmit --project ./tsconfig.json",
-        "cf-typegen": "wrangler types",
-        "deploy:cf": "wrangler deploy"
+        "build": "pnpm --filter @unbound/web run build",
+        "cf-typegen": "wrangler types"
     },
     "dependencies": {
         "@hapi/iron": "^7.0.1",
