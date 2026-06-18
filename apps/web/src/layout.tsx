@@ -49,15 +49,26 @@ export function Layout({
                     children
                 ) : (
                     <div class="w-full flex-1 max-w-6xl flex flex-col">
-                        <Navbar appName={appName} session={session} navbarState={navbarState} />
+                        <Navbar
+                            appName={appName}
+                            session={session}
+                            navbarState={navbarState}
+                        />
                         <main class="flex flex-col w-full flex-1">
                             {children}
                         </main>
-                        <footer class="w-full py-6 border-t border-muted text-sm text-muted-foreground">
-                            <p>
+                        <footer class="w-full flex flex-row py-6 border-t border-muted text-sm text-muted-foreground">
+                            <p class="flex-1">
                                 &copy; {new Date().getFullYear()} Project
                                 Unbound.
                             </p>
+                            <div class="flex flex-row gap-4 [&_a]:hover:text-foreground">
+                                {/*<a href="/terms">Terms</a>
+                                <a href="/privacy">Privacy</a>*/}
+                                <a href="https://github.com/then77/unbound">
+                                    Github
+                                </a>
+                            </div>
                         </footer>
                     </div>
                 )}
