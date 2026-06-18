@@ -11,7 +11,8 @@ export type LayoutProps = PropsWithChildren<{
     session?: Partial<Session> | null;
     empty?: boolean;
     navbarState?: null | "show" | "hide";
-    nextVersion?: boolean;
+    gitCommit?: string | null;
+    nextVersion?: boolean | null;
 }>;
 
 export function Layout({
@@ -20,6 +21,7 @@ export function Layout({
     session,
     empty,
     navbarState,
+    gitCommit,
     nextVersion,
     children,
 }: LayoutProps) {
@@ -49,7 +51,9 @@ export function Layout({
                 {nextVersion && (
                     <>
                         <div class="fixed top-0 left-0 z-9999 w-full bg-warning-background/50 p-2 px-8 text-center text-sm text-warning-foreground">
-                            Heads up! This is <b>Unbound Next</b> (wip) version, and might contains unfinished/buggy feature. Do not use for production!
+                            Heads up! This is the <b>Unbound Next</b> (WIP)
+                            version and may contain unfinished/buggy features.
+                            Do not use it in production!
                         </div>
                         <div class="h-6" />
                     </>
@@ -67,12 +71,24 @@ export function Layout({
                         <main class="flex flex-col w-full flex-1">
                             {children}
                         </main>
-                        <footer class="w-full flex flex-row py-6 border-t border-muted text-sm text-muted-foreground">
+                        <footer class="w-full flex flex-row py-6 border-t border-muted text-sm text-muted-foreground [&_a]:hover:text-foreground">
                             <p class="flex-1">
                                 &copy; {new Date().getFullYear()} Project
                                 Unbound.
+                                {gitCommit && (
+                                    <>
+                                        {" "}
+                                        Build version{" "}
+                                        <a
+                                            class="underline"
+                                            href={`https://github.com/then77/unbound/commit/${gitCommit}`}
+                                        >
+                                            {gitCommit.slice(0, 7)}
+                                        </a>
+                                    </>
+                                )}
                             </p>
-                            <div class="flex flex-row gap-4 [&_a]:hover:text-foreground">
+                            <div class="flex flex-row gap-4">
                                 {/*<a href="/terms">Terms</a>
                                 <a href="/privacy">Privacy</a>*/}
                                 <a href="https://github.com/then77/unbound">

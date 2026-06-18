@@ -24,6 +24,10 @@ export const rendererMiddleware = jsxRenderer(
         const session = c.get("session");
         const appName =
             c.env.APP_NAME && c.env.APP_NAME != "" ? c.env.APP_NAME : "Unbound";
+
+        // Specific env from ci/cd. If you self deploy yourself, you can
+        // safely not use / delete this
+        const gitCommit = (c.env as any).GIT_COMMIT ?? null;
         const nextVersion = (c.env as any).NEXT_VERSION
             ? Boolean((c.env as any).NEXT_VERSION)
             : false;
@@ -35,6 +39,7 @@ export const rendererMiddleware = jsxRenderer(
                 session={session}
                 empty={empty}
                 navbarState={navbarState}
+                gitCommit={gitCommit}
                 nextVersion={nextVersion}
             >
                 {children}
