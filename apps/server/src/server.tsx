@@ -9,6 +9,7 @@ import { sessionMiddleware } from "@unbound/server/middlewares/session";
 import { ErrorPage, NotFoundPage } from "@unbound/web/pages/error";
 
 import homeRoutes from "@unbound/server/routes/home";
+import legalRoutes from "@unbound/server/routes/legal";
 import openIdRoutes from "@unbound/server/routes/openid";
 import loginRoutes from "@unbound/server/routes/login";
 import profileRoutes from "@unbound/server/routes/profile";
@@ -28,6 +29,7 @@ app.use("*", setupMiddleware);
 app.use("*", sessionMiddleware);
 
 app.route("/", homeRoutes);
+app.route("/", legalRoutes);
 app.route("/", openIdRoutes);
 app.route("/", loginRoutes);
 app.route("/", profileRoutes);
@@ -35,7 +37,7 @@ app.route("/", authorizeRoutes);
 
 app.notFound(async (c) => {
     return c.render(<NotFoundPage />, { title: "404" });
-})
+});
 
 app.onError(async (_, c) => {
     return c.render(
