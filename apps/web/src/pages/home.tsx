@@ -7,11 +7,8 @@ import { Icon } from "@unbound/web/components/icon";
 export function HomePage() {
     return (
         <>
-            <section class="w-full relative">
-                <div class="absolute right-0 w-full max-w-xl h-full pb-32 hidden lg:flex justify-center items-center">
-                    <IntroIllustration class="max-w-md xl:max-w-lg" />
-                </div>
-                <div class="max-w-3xl flex flex-col justify-center gap-8 pt-24 pb-40 text-left">
+            <section class="w-full flex flex-row">
+                <div class="max-w-3xl flex flex-col justify-center lg:shrink-0 gap-8 pt-20 sm:pt-24 pb-32 sm:pb-40 text-left">
                     <h1 class="max-w-lg text-5xl sm:text-6xl text-balance font-extrabold leading-12 sm:leading-18">
                         <b class="text-primary-foreground [&_svg]:size-12 sm:[&_svg]:size-14">
                             <Icon
@@ -43,10 +40,14 @@ export function HomePage() {
                         </Button>
                     </div>
                 </div>
+                <div class="hidden lg:flex w-full h-full pb-32 justify-center items-center">
+                    <IntroIllustration class="max-w-md xl:max-w-lg" />
+                </div>
             </section>
             <section class="w-full border border-muted py-8 px-8 text-left mb-8">
                 This content is in development and will be filled in later time.
-                Dont worry, some feature however, is already working. You only need to go deep further for now.
+                Dont worry, some feature however, is already working. You only
+                need to go deep further for now.
             </section>
         </>
     );
