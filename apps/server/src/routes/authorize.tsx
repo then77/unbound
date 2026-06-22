@@ -101,11 +101,26 @@ const authorizeFormSchema = z.object({
 
 const tokenFormSchema = z.object({
     grant_type: z.literal("authorization_code"),
-    client_id: z.string().min(1),
+    client_id: z.string().min(1).optional(),
     redirect_uri: z.url(),
     code: z.string().min(1),
     code_verifier: z.string().min(1).optional(),
 });
+
+function getBasicAuthClientId(authorization: string | undefined) {
+    const match = authorization?.match(/^Basic\s+(.+)$/i);
+    if (!match) return null;
+
+    try {
+        const decoded = atob(match[1].trim());
+        const parts = decoded.split(":");
+        if (parts.length < 4) return null;
+
+        return parts.slice(0, 3).join(":");
+    } catch {
+        return null;
+    }
+}
 
 const app = new Hono<AppEnv>();
 
@@ -197,8 +212,22 @@ app.post(
         return c.json(tokenValidationError(result.error.issues, "form"), 400);
     }),
     async (c) => {
-        const { client_id, redirect_uri, code, code_verifier } =
-            c.req.valid("form");
+        const form = c.req.valid("form");
+        const { redirect_uri, code, code_verifier } = form;
+
+        const client_id =
+            getBasicAuthClientId(c.req.header("Authorization")) ??
+            form.client_id;
+
+        if (!client_id) {
+            return c.json(
+                {
+                    error: "invalid_request",
+                    error_description: "Missing required parameter: client_id",
+                },
+                400,
+            );
+        }
 
         let result: Awaited<ReturnType<typeof decodeAuthCode>>;
         try {
