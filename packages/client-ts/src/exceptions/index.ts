@@ -7,3 +7,6 @@ export class UnboundError extends Error {
         this.code = code;
     }
 }
+
+export { APIUnboundError } from "@/exceptions/api";
+export { AuthUnboundError } from "@/exceptions/auth";

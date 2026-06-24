@@ -12,18 +12,11 @@ const baseConfig: UserConfig = {
 };
 
 export default defineConfig([
-    // unbound-auth
+    // unbound-auth and adapters
     {
         ...baseConfig,
         entry: {
             index: "src/index.ts",
-        },
-    },
-
-    // unbound-auth/adapters
-    {
-        ...baseConfig,
-        entry: {
             "adapters/index": "src/adapters/index.ts",
         },
     },
@@ -32,7 +25,7 @@ export default defineConfig([
     {
         ...baseConfig,
         entry: {
-            "unbound.min": "src/index.ts",
+            "unbound.min": "src/browser.ts",
         },
         format: ["iife"],
         globalName: "Unbound",
@@ -40,5 +33,8 @@ export default defineConfig([
         dts: false,
         unbundle: false,
         minify: true,
+        outputOptions: {
+            entryFileNames: "[name].js",
+        },
     },
 ]);

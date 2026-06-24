@@ -1,48 +1,265 @@
+import type {
+    APIUnboundError,
+    AuthUnboundError,
+    UnboundError,
+} from "@/exceptions";
+
 export type Scope = "openid" | "profile" | "email";
 
+export type StorageAdapterKey =
+    /* Key for access token */
+    | "token"
+    /* Key for login pkce verifier */
+    | "verifier"
+    /* Key for login state */
+    | "state";
+
+export interface StorageAdapter {
+    get(key: StorageAdapterKey): Promise<string | null>;
+    set(key: StorageAdapterKey, value: string): Promise<void>;
+    remove(key: StorageAdapterKey): Promise<void>;
+}
+
+/**
+ * Options used to configure an Unbound client.
+ */
 export interface ClientOptions {
+    /**
+     * Auth server URL.
+     *
+     * @defaultValue `"https://unbound.rlzy.me"`
+     */
     auth_url?: string;
+
+    /**
+     * Default redirect URI used to receive the auth callback.
+     *
+     * Relative paths are resolved against the current browser origin. Absolute
+     * URLs can be used in both browser and server environments.
+     *
+     * @example
+     * ```ts
+     * createUnboundClient({ redirect_uri: "/auth/callback" });
+     * ```
+     */
     redirect_uri?: string;
+
+    /**
+     * Scopes to request during authorization.
+     *
+     * Allowed values are `"openid"`, `"profile"`, and `"email"`.
+     *
+     * @defaultValue `["profile", "email"]`
+     */
     scopes?: Scope[];
+
+    /**
+     * Whether this client runs in a server environment.
+     *
+     * This help updates the expected types and configure server-specific behaviour.
+     * For example, `auto_redirect` is always disabled on the server.
+     */
+    server?: boolean;
+
+    /**
+     * Whether calls that require a redirect should automatically redirect the
+     * browser, such as `startSignIn`.
+     * 
+     * This also enables auto handle `finishSignIn` and redirect.
+     *
+     * In server environment, this always and must be disabled.
+     */
+    auto_redirect?: boolean;
+
+    /**
+     * Storage adapter used to persist the session and temporary login state,
+     * such as PKCE and state values.
+     */
+    storage?: StorageAdapter;
+
+    /**
+     * Custom fetch implementation.
+     *
+     * Must be compatible with the global `fetch` API.
+     */
     fetcher?: typeof fetch;
+
     advanced?: {
         endpoints?: {
             authorization?: string;
             token?: string;
             keys?: string;
-        }
-    }
+        };
+    };
 }
 
-export interface StartSignInOptions {
-    redirect_uri?: string;
-    scopes?: Scope[];
+export type BrowserClientOptions = ClientOptions & {
+    server?: false;
+};
+
+export type ServerClientOptions = ClientOptions & {
+    server: true;
+    auto_redirect?: false;
+};
+
+export type ServerClientOptionsWithRedirect = ServerClientOptions & {
+    redirect_uri: string;
+};
+export type ServerClientOptionsWithoutRedirect = ServerClientOptions & {
+    redirect_uri?: undefined;
+};
+
+export type ValidateClientOptions<T extends ClientOptions> = T extends {
+    server: true;
 }
+    ? { auto_redirect?: false }
+    : unknown;
+
+export type MergeClientOptions<
+    T extends ClientOptions,
+    U extends ClientOptions,
+> = Omit<T, keyof U> & U;
+
+export type ClientState = {
+    init: boolean;
+    jwks: PublicJWK[] | null;
+    state: State;
+};
+
+export type FunctionOptions<TOptions, TResult> = {} extends TOptions
+    ? (opts?: TOptions) => TResult
+    : (opts: TOptions) => TResult;
+
+export type FunctionResult<T> =
+    | {
+          data: T;
+          error: null;
+      }
+    | {
+          data: null;
+          error: AuthUnboundError | APIUnboundError | UnboundError | Error;
+      };
+
+export type RedirectUriOption<T extends ClientOptions> = T extends {
+    server: true;
+}
+    ? T extends { redirect_uri: string }
+        ? { redirect_uri?: string }
+        : { redirect_uri: string }
+    : { redirect_uri?: string };
+
+/**
+ * Options for starting the sign-in flow.
+ */
+export type StartSignInOptions<T extends ClientOptions = ClientOptions> =
+    RedirectUriOption<T> & {
+        /**
+         * Scopes to request for this authorization attempt.
+         *
+         * Allowed values are `"openid"`, `"profile"`, and `"email"`.
+         * Defaults to the client's configured scopes.
+         */
+        scopes?: Scope[];
+    };
 
 export interface StartSignInResult {
     url: string;
     verifier: string;
 }
 
-export interface FinishSignInOptions {
-    code?: string;
-    redirect_uri?: string;
-    verifier?: string;
-}
+/**
+ * Options for finishing the sign-in flow after receiving the auth callback.
+ *
+ * In server environments, `code` and `verifier` must be provided manually.
+ * In browser environments, they can be read from the current URL and storage.
+ */
+export type FinishSignInOptions<T extends ClientOptions = ClientOptions> =
+    RedirectUriOption<T> &
+        (T extends { server: true }
+            ? {
+                  /** Authorization code returned by the auth server. */
+                  code: string;
+                  /** PKCE verifier created when starting sign-in. */
+                  verifier: string;
+              }
+            : {
+                  /** Authorization code returned by the auth server. */
+                  code?: string;
+                  /** PKCE verifier created when starting sign-in. */
+                  verifier?: string;
+              });
 
 export interface FinishSignInResult {
     access_token: string;
     expires_in: number;
 }
 
-export interface SessionResult {
-    user: {
-        id: string;
-        name?: string;
-        picture?: string;
-        email?: string;
-        email_verified?: boolean;
-    },
-    access_token: string;
-    expires_in: string;
+export interface UnboundClient<T extends ClientOptions = ClientOptions> {
+    clone: <U extends ClientOptions = {}>(
+        opts?: ClientOptions & U & ValidateClientOptions<U>,
+    ) => UnboundClient<MergeClientOptions<T, U>>;
+    startSignIn: FunctionOptions<
+        StartSignInOptions<T>,
+        Promise<FunctionResult<StartSignInResult>>
+    >;
+    finishSignIn: FunctionOptions<
+        FinishSignInOptions<T>,
+        FunctionResult<FinishSignInResult>
+    >;
 }
+
+/**
+ * Authenticated session returned by Unbound.
+ */
+export interface Session {
+    /** Authenticated user profile, when available. */
+    user?: {
+        /** Unique user ID. */
+        id: string;
+        /** Display name. */
+        name?: string;
+        /** Profile picture URL. */
+        picture?: string;
+        /** Email address. */
+        email?: string;
+        /** Whether the email address has been verified. */
+        email_verified?: boolean;
+    };
+    /** Access token for authenticated requests. */
+    access_token: string;
+    /** Number of seconds until the access token expires. */
+    expires_in?: number;
+}
+
+export interface State {
+    session: Session | null;
+    verifier: string | null;
+    state: string | null;
+}
+
+type JWKBase = {
+    kid: string;
+};
+
+type RSAPublicJWK = JWKBase & {
+    kty: "RSA";
+    n: string;
+    e: string;
+};
+
+type ECPublicJWK = JWKBase & {
+    kty: "EC";
+
+    crv: "P-256" | "P-384" | "P-521" | "secp256k1";
+
+    x: string;
+    y: string;
+};
+
+type OKPPublicJWK = JWKBase & {
+    kty: "OKP";
+    crv: "Ed25519" | "Ed448" | "X25519" | "X448";
+    x: string;
+};
+
+export type PublicJWK = RSAPublicJWK | ECPublicJWK | OKPPublicJWK;
