@@ -9,43 +9,70 @@ import { APIUnboundError } from "@/exceptions/api";
  * @param authUrl - Base auth server URL.
  * @param endpoint - JWKS endpoint path or URL, resolved against `authUrl`.
  * @param fetcher - Fetch implementation to use for the request.
- * @returns The public JWKs, or `null` when the request or response is invalid.
+ * @returns The public JWKs.
+ * @throws {APIUnboundError} When the request fails or response is invalid.
  */
 export async function fetchJWKS(
     authUrl: string,
     endpoint?: string,
     fetcher?: typeof fetch,
-): Promise<PublicJWK[] | null> {
+): Promise<PublicJWK[]> {
     fetcher = fetcher ?? fetch;
     const url = new URL(endpoint ?? "/.well-known/jwks.json", authUrl);
 
-    const res = await fetcher(url, {
-        method: "GET",
-        headers: {
-            accept: "application/json",
-        },
-    });
-
-    if (
-        !res.ok ||
-        !res.headers.get("content-type") ||
-        res.headers.get("content-type")!.toLowerCase() != "application/json"
-    )
-        return null;
-
     try {
+        const res = await fetcher(url, {
+            method: "GET",
+            headers: {
+                accept: "application/json",
+            },
+        });
+
+        if (!res.ok) {
+            throw new APIUnboundError(
+                "SERVER_ERROR",
+                res.status,
+                `Failed to fetch JWKS: ${res.status}`,
+            );
+        }
+
+        const contentType = res.headers.get("content-type");
+        if (
+            !contentType ||
+            !contentType.toLowerCase().includes("application/json")
+        ) {
+            throw new APIUnboundError(
+                "SERVER_ERROR",
+                res.status,
+                "Invalid content-type for JWKS response",
+            );
+        }
+
         const json = await res.json();
         if (
             !json ||
             !json.keys ||
             !Array.isArray(json.keys) ||
-            Array(json.keys).length == 0 ||
-            Array(json.keys).every((e) => e?.kty && e?.crv && e?.kid)
-        )
-            return null;
+            json.keys.length === 0
+        ) {
+            throw new APIUnboundError(
+                "SERVER_ERROR",
+                res.status,
+                "Invalid JWKS response format",
+            );
+        }
         return json.keys as PublicJWK[];
-    } catch {}
-    return null;
+    } catch (error) {
+        if (error instanceof APIUnboundError) {
+            throw error;
+        }
+        throw new APIUnboundError(
+            "NETWORK_ERROR",
+            undefined,
+            "Failed to fetch JWKS",
+            error,
+        );
+    }
 }
 
 /**
@@ -53,27 +80,35 @@ export async function fetchJWKS(
  *
  * @param jwt - JWT to verify.
  * @param jwks - Public JWKs used to find the signing key by `kid`.
- * @returns `true` when the token is valid, otherwise `false`.
+ * @throws {AuthUnboundError} When the token is invalid or verification fails.
  */
-export async function verifyJWT(
-    jwt: string,
-    jwks: PublicJWK[],
-): Promise<boolean> {
+export async function verifyJWT(jwt: string, jwks: PublicJWK[]): Promise<void> {
     try {
         const header = decodeProtectedHeader(jwt);
-        if (header.alg !== "ES256") return false;
+        if (header.alg !== "ES256") {
+            throw new AuthUnboundError(
+                "INVALID_TOKEN",
+                "Unsupported algorithm",
+            );
+        }
 
         const jwk = jwks.find((x) => x.kid === header.kid);
-        if (!jwk) return false;
+        if (!jwk) {
+            throw new AuthUnboundError(
+                "INVALID_TOKEN",
+                "Key not found in JWKS",
+            );
+        }
 
         const key = await importJWK(jwk, header.alg);
         await jwtVerify(jwt, key, {
             algorithms: ["ES256"],
         });
-
-        return true;
-    } catch {
-        return false;
+    } catch (error) {
+        if (error instanceof AuthUnboundError) {
+            throw error;
+        }
+        throw new AuthUnboundError("INVALID_TOKEN", "JWT verification failed");
     }
 }
 
@@ -82,8 +117,9 @@ export async function verifyJWT(
  *
  * @param jwt - JWT containing standard user profile claims.
  * @returns Session data derived from the token payload.
+ * @throws {AuthUnboundError} When the JWT cannot be decoded or is invalid.
  */
-export function getSessionFromJWT(jwt: string): Session | null {
+export function getSessionFromJWT(jwt: string): Session {
     try {
         const payload = decodeJwt(jwt);
         const session: Session = {
@@ -91,10 +127,11 @@ export function getSessionFromJWT(jwt: string): Session | null {
         };
 
         if (typeof payload.exp === "number" && Number.isFinite(payload.exp)) {
-            session.expires_in = Math.max(
-                0,
-                payload.exp - Math.floor(Date.now() / 1000),
-            );
+            const expiresIn = payload.exp - Math.floor(Date.now() / 1000);
+            if (expiresIn <= 0) {
+                throw new AuthUnboundError("EXPIRED_TOKEN");
+            }
+            session.expires_in = expiresIn;
         }
 
         if (typeof payload.sub === "string" && payload.sub.length > 0) {
@@ -113,9 +150,12 @@ export function getSessionFromJWT(jwt: string): Session | null {
         }
 
         return session;
-    } catch {}
-
-    return null;
+    } catch (error) {
+        if (error instanceof AuthUnboundError) {
+            throw error;
+        }
+        throw new AuthUnboundError("INVALID_TOKEN", "Failed to decode JWT");
+    }
 }
 
 /**

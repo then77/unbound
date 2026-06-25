@@ -46,6 +46,7 @@ export const Unbound: UnboundBrowserClient = {
     startSignIn: defaultClient.startSignIn.bind(defaultClient),
     finishSignIn: defaultClient.finishSignIn.bind(defaultClient),
     getSession: defaultClient.getSession.bind(defaultClient),
+    setSession: defaultClient.setSession.bind(defaultClient),
     get user() {
         return defaultClient.user;
     },

@@ -36,5 +36,9 @@ export default defineConfig([
         outputOptions: {
             entryFileNames: "[name].js",
         },
+        // Always bundle jose in cdn build for auth
+        deps: {
+            alwaysBundle: ["jose"],
+        },
     },
 ]);

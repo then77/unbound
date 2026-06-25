@@ -21,6 +21,8 @@ import type {
     StartSignInOptions,
     PublicJWK,
     Session,
+    GetSessionOptions,
+    SetSessionOptions,
 } from "@/types";
 
 const defaultClientOptions: ClientOptions = {
@@ -53,19 +55,18 @@ export function createClient<T extends ClientOptions>(
               state: null,
           };
 
-    async function verifyToken(token: string) {
-        if (!clientOpts.server) {
-            _state.session = getSessionFromJWT(token);
-        } else {
+    async function verifyToken(token: string, check?: boolean) {
+        if (check ?? clientOpts.server) {
             _jwks ??= await fetchJWKS(
                 clientOpts.auth_url!,
                 clientOpts.advanced?.endpoints?.keys,
                 clientOpts.fetcher,
             );
 
-            if (_jwks && (await verifyJWT(token, _jwks))) {
-                _state.session = getSessionFromJWT(token);
-            }
+            await verifyJWT(token, _jwks);
+            _state.session = getSessionFromJWT(token);
+        } else {
+            _state.session = getSessionFromJWT(token);
         }
     }
 
@@ -78,7 +79,9 @@ export function createClient<T extends ClientOptions>(
         const token =
             _state.session?.access_token ?? (await storage?.get("token"));
         if (token && !_state.session) {
-            await verifyToken(token);
+            try {
+                await verifyToken(token);
+            } catch {}
         }
         _init = true;
     }
@@ -241,12 +244,44 @@ export function createClient<T extends ClientOptions>(
                 return fail(error as Error);
             }
         },
-        getSession: async () => {
-            await initialize();
-            return ok(null as unknown as Session);
+        getSession: async (opts?: GetSessionOptions) => {
+            try {
+                await initialize();
+
+                if (!_state.session) return ok(null);
+                await verifyToken(
+                    _state.session.access_token,
+                    opts?.verify ?? false,
+                );
+
+                return ok(_state.session);
+            } catch (error) {
+                return fail(error as Error);
+            }
+        },
+        setSession: async (opts: SetSessionOptions) => {
+            try {
+                await initialize();
+                const token = opts.access_token;
+
+                if (!token) {
+                    return fail(new AuthUnboundError("MISSING_TOKEN"));
+                }
+
+                await verifyToken(token, opts.verify ?? false);
+                await storage.set("token", token);
+
+                if (!_state.session) {
+                    return fail(new AuthUnboundError("INVALID_TOKEN"));
+                }
+
+                return ok(_state.session);
+            } catch (error) {
+                return fail(error as Error);
+            }
         },
         get user(): Session | null {
-            return null as unknown as Session;
+            return _state.session;
         },
     };
 }

@@ -269,20 +269,147 @@ export interface FinishSignInResult {
     expires_in: number;
 }
 
+export type GetSessionOptions = {
+    /**
+     * Whether to verify the session token against the auth server's JWKs.
+     *
+     * When enabled, throws `AuthUnboundError` or `APIUnboundError` if verification fails.
+     * 
+     * Recommended and by default enabled on server environment.
+     */
+    verify?: boolean;
+};
+
+/**
+ * Options for setting a new session.
+ */
+export type SetSessionOptions = {
+    /** Access token to store and verify. */
+    access_token: string;
+} & GetSessionOptions;
+
+/**
+ * Unbound client interface for managing authentication flows.
+ */
 export interface UnboundClient<T extends ClientOptions = ClientOptions> {
+    /**
+     * Clone this client instance
+     *
+     * @param opts - Additional options to merge with the current configuration.
+     * @returns A cloned client instance
+     */
     clone: <U extends ClientOptions = {}>(
         opts?: ClientOptions & U & ValidateClientOptions<U>,
     ) => UnboundClient<MergeClientOptions<T, U>>;
+    /**
+     * Initializes the client by loading stored session and auth state.
+     *
+     * This is called automatically when calling other methods, but can be invoked manually
+     * to preload the session state.
+     */
     initialize: FunctionOptions<null, Promise<void>>;
+    /**
+     * Starts the sign-in flow by generating an authorization URL.
+     *
+     * @param opts - Sign-in options including redirect URI, scopes, and auto-redirect behavior.
+     * @returns Authorization URL and PKCE parameters, or an error.
+     *
+     * @example
+     * ```ts
+     * const { data } = await client.startSignIn({ scopes: ['openid', 'profile'] });
+     * if (data) {
+     *   console.log('Redirect to:', data.url);
+     * }
+     * ```
+     */
     startSignIn: FunctionOptions<
         StartSignInOptions<T>,
         Promise<FunctionResult<StartSignInResult>>
     >;
+    /**
+     * Completes the sign-in flow by exchanging the authorization code for a token.
+     *
+     * In browser environments with no code provided in options, this automatically
+     * reads the code from the URL and validates the state parameter.
+     *
+     * @param opts - Options including authorization code, verifier, and redirect URI.
+     * @returns Access token and expiration, or an error.
+     *
+     * @example
+     * ```ts
+     * // Browser with auto_redirect
+     * const { data, error } = await client.finishSignIn();
+     *
+     * // Server environment
+     * const { data, error } = await client.finishSignIn({
+     *   code: 'auth_code',
+     *   verifier: 'stored_verifier'
+     * });
+     * ```
+     */
     finishSignIn: FunctionOptions<
         FinishSignInOptions<T>,
         Promise<FunctionResult<FinishSignInResult>>
     >;
-    getSession: FunctionOptions<null, Promise<FunctionResult<Session>>>;
+    /**
+     * Retrieves the current session.
+     *
+     * @param opts - Options including whether to verify the token.
+     * @returns The current session, or `null` if not authenticated.
+     *
+     * @example
+     * ```ts
+     * // Get session without verification
+     * const { data } = await client.getSession();
+     *
+     * // Get session with verification
+     * const { data, error } = await client.getSession({ verify: true });
+     * if (error) {
+     *   console.error('Token invalid:', error);
+     * }
+     * ```
+     */
+    getSession: FunctionOptions<
+        GetSessionOptions,
+        Promise<FunctionResult<Session | null>>
+    >;
+    /**
+     * Sets a new session by storing and optionally verifying a token.
+     *
+     * @param opts - Options including the access token and whether to verify it.
+     * @returns The session derived from the token, or an error.
+     *
+     * @example
+     * ```ts
+     * const { data, error } = await client.setSession({
+     *   access_token: 'token_from_somewhere',
+     *   verify: true
+     * });
+     * ```
+     */
+    setSession: FunctionOptions<
+        SetSessionOptions,
+        Promise<FunctionResult<Session>>
+    >;
+    /**
+     * Current authenticated user session from cached state.
+     *
+     * Returns `null` if not authenticated or if the client has not been initialized.
+     * This is a synchronous getter that reflects the session state loaded by `initialize()`.
+     *
+     * Call `initialize()` first to ensure the session is loaded from storage.
+     *
+     * @example
+     * ```ts
+     * // May be null before initialization
+     * console.log(client.user); // null
+     *
+     * await client.initialize();
+     * if (client.user) {
+     *   console.log('Logged in as:', client.user.user?.name);
+     * }
+     * ```
+     */
     user: Session | null;
 }
 
