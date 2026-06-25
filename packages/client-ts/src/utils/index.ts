@@ -29,7 +29,7 @@ export function isBrowser() {
  * In server environments (Node.js, edge runtimes, SSR), this returns `null`
  * because the base URL cannot be reliably inferred.
  *
- * @returns {string | null} The origin URL (e.g. `https://example.com`) or `null`
+ * @returns The origin URL (e.g. `https://example.com`) or `null`
  */
 export function getBaseURL(): string | null {
     if (isBrowser()) {
@@ -40,13 +40,13 @@ export function getBaseURL(): string | null {
 
 /**
  * Resolves a valid redirect URI for authentication flows.
- * 
- * In server environment, input requires absolute url to work, 
+ *
+ * In server environment, input requires absolute url to work,
  * or result might be null. See {@link getBaseURL} for info.
  *
  * @param input - Redirect URI input
  *
- * @returns {string | null} Fully qualified redirect URI or `null` if it cannot be resolved.
+ * @returns Fully qualified redirect URI or `null` if it cannot be resolved.
  *
  * @example
  * ```ts
@@ -93,4 +93,3 @@ export function getRedirectUri(input?: string | null): string | null {
 
     return null;
 }
-

@@ -7,9 +7,11 @@ export type AuthUnboundErrorCode =
     | "MISSING_REDIRECT_URI"
     | "MISSING_SCOPES"
     | "MISSING_CODE"
+    | "MISSING_STATE"
     | "MISSING_VERIFIER"
     | "INVALID_REDIRECT_URI"
     | "INVALID_CODE"
+    | "INVALID_STATE"
     | "INVALID_VERIFIER"
     | "EXPIRED_CODE"
     | "USED_CODE"
@@ -22,23 +24,17 @@ export const authUnboundErrorMessages: Record<AuthUnboundErrorCode, string> = {
         "Missing redirect URI. Set it in client config or pass it when calling the function.",
     MISSING_SCOPES:
         "Missing scopes. Please specify at least one scope (e.g. 'openid', 'profile', 'email').",
-    MISSING_CODE:
-        "Missing authorization code.",
-    MISSING_VERIFIER:
-        "Missing PKCE code verifier. Make sure to call startSignIn() before finishing sign in.",
-    INVALID_REDIRECT_URI:
-        "Invalid redirect URI. It must match the registered callback URL exactly.",
-    INVALID_CODE:
-        "Invalid authorization code. It may be malformed or not issued by the server.",
-    INVALID_VERIFIER:
-        "Invalid code verifier. It does not match the one used during sign-in initiation.",
-    EXPIRED_CODE:
-        "Authorization code has expired. Please start the sign-in flow again.",
-    USED_CODE:
-        "Authorization code has already been used. Each code can only be exchanged once.",
-    MISSING_TOKEN:
-        "Missing token. Authentication failed or session is not initialized.",
-    INVALID_TOKEN: "Invalid token. It may be corrupted, or signed incorrectly.",
+    MISSING_CODE: "Missing authorization code.",
+    MISSING_STATE: "Missing login state.",
+    MISSING_VERIFIER: "Missing PKCE code verifier.",
+    INVALID_REDIRECT_URI: "Invalid redirect URI.",
+    INVALID_CODE: "Invalid authorization code.",
+    INVALID_STATE: "Invalid login state.",
+    INVALID_VERIFIER: "Invalid code verifier.",
+    EXPIRED_CODE: "Authorization code has expired. Please sign-in again.",
+    USED_CODE: "Authorization code has already been used.",
+    MISSING_TOKEN: "Missing session token.",
+    INVALID_TOKEN: "Invalid session token.",
     EXPIRED_TOKEN: "Token has expired. Please sign in again.",
 };
 

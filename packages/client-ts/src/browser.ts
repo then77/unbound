@@ -1,8 +1,13 @@
 import { createUnboundClient } from "@/index";
-import type { UnboundClient, BrowserClientOptions as ClientBrowserOptions } from "@/types";
+import type {
+    UnboundClient,
+    BrowserClientOptions as ClientBrowserOptions,
+    Session,
+} from "@/types";
 
 const defaultClient = createUnboundClient({
     auto_redirect: true,
+    redirect_to: "/",
 });
 
 /**
@@ -25,15 +30,23 @@ type UnboundBrowserClient = {
     ) => UnboundClient<BrowserClientOptions<T>>;
 } & {
     [K in ClientMethodKeys]: Client[K];
+} & {
+    user: Session | null;
 };
 
 export const Unbound: UnboundBrowserClient = {
     create: <T extends ClientBrowserOptions = ClientBrowserOptions>(opts?: T) =>
         createUnboundClient({
             auto_redirect: true,
+            redirect_to: "/",
             ...opts,
         } as BrowserClientOptions<T>) as UnboundClient<BrowserClientOptions<T>>,
     clone: defaultClient.clone.bind(defaultClient),
+    initialize: defaultClient.initialize.bind(defaultClient),
     startSignIn: defaultClient.startSignIn.bind(defaultClient),
     finishSignIn: defaultClient.finishSignIn.bind(defaultClient),
+    getSession: defaultClient.getSession.bind(defaultClient),
+    get user() {
+        return defaultClient.user;
+    },
 };

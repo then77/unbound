@@ -45,6 +45,25 @@ export interface ClientOptions {
     redirect_uri?: string;
 
     /**
+     * URL to automatically redirect to after `finishSignIn` completes successfully.
+     *
+     * Only works when `auto_redirect` is set to `true`. The client will navigate
+     * to this URL after the authentication flow is complete.
+     *
+     * In server environments, this must NOT be configured as `auto_redirect` is
+     * always disabled on the server.
+     *
+     * @example
+     * ```ts
+     * createUnboundClient({
+     *   auto_redirect: true,
+     *   redirect_to: "/dashboard"
+     * });
+     * ```
+     */
+    redirect_to?: string;
+
+    /**
      * Scopes to request during authorization.
      *
      * Allowed values are `"openid"`, `"profile"`, and `"email"`.
@@ -64,7 +83,7 @@ export interface ClientOptions {
     /**
      * Whether calls that require a redirect should automatically redirect the
      * browser, such as `startSignIn`.
-     * 
+     *
      * This also enables auto handle `finishSignIn` and redirect.
      *
      * In server environment, this always and must be disabled.
@@ -99,7 +118,8 @@ export type BrowserClientOptions = ClientOptions & {
 
 export type ServerClientOptions = ClientOptions & {
     server: true;
-    auto_redirect?: false;
+    auto_redirect?: false | null;
+    redirect_to?: null;
 };
 
 export type ServerClientOptionsWithRedirect = ServerClientOptions & {
@@ -144,26 +164,68 @@ export type RedirectUriOption<T extends ClientOptions> = T extends {
     server: true;
 }
     ? T extends { redirect_uri: string }
-        ? { redirect_uri?: string }
-        : { redirect_uri: string }
-    : { redirect_uri?: string };
+        ? {
+              /**
+               * Redirect URI to receive the auth callback.
+               *
+               * Optional when already configured in client options.
+               */
+              redirect_uri?: string;
+          }
+        : {
+              /**
+               * Redirect URI to receive the auth callback.
+               *
+               * Required in server environments when not configured in client options.
+               */
+              redirect_uri: string;
+          }
+    : {
+          /**
+           * Redirect URI to receive the auth callback.
+           *
+           * Optional when already configured in client options.
+           */
+          redirect_uri?: string;
+      };
+
+export type AutoRedirectOption<T extends ClientOptions> = T extends {
+    server: true;
+}
+    ? {
+          /**
+           * Whether to automatically redirect the browser.
+           *
+           * Always disabled in server environments.
+           */
+          auto_redirect?: undefined;
+      }
+    : {
+          /**
+           * Whether to automatically redirect the browser and handle the callback.
+           */
+          auto_redirect?: boolean;
+      };
 
 /**
  * Options for starting the sign-in flow.
  */
 export type StartSignInOptions<T extends ClientOptions = ClientOptions> =
-    RedirectUriOption<T> & {
-        /**
-         * Scopes to request for this authorization attempt.
-         *
-         * Allowed values are `"openid"`, `"profile"`, and `"email"`.
-         * Defaults to the client's configured scopes.
-         */
-        scopes?: Scope[];
-    };
+    RedirectUriOption<T> &
+        AutoRedirectOption<T> & {
+            /**
+             * Scopes to request for this authorization attempt.
+             *
+             * Allowed values are `"openid"`, `"profile"`, and `"email"`.
+             * Defaults to the client's configured scopes.
+             */
+            scopes?: Scope[];
+        };
 
 export interface StartSignInResult {
     url: string;
+    state: string;
+    challenge: string;
     verifier: string;
 }
 
@@ -175,12 +237,25 @@ export interface StartSignInResult {
  */
 export type FinishSignInOptions<T extends ClientOptions = ClientOptions> =
     RedirectUriOption<T> &
-        (T extends { server: true }
+        AutoRedirectOption<T> & {
+            /**
+             * URL to redirect to after sign-in completes successfully.
+             *
+             * Only works when `auto_redirect` is set to `true`.
+             */
+            redirect_to?: string;
+        } & (T extends { server: true }
             ? {
                   /** Authorization code returned by the auth server. */
                   code: string;
                   /** PKCE verifier created when starting sign-in. */
                   verifier: string;
+                  /**
+                   * URL to redirect to after sign-in completes successfully.
+                   *
+                   * Must be not configured in server environment.
+                   */
+                  redirect_to?: null | undefined;
               }
             : {
                   /** Authorization code returned by the auth server. */
@@ -198,14 +273,17 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
     clone: <U extends ClientOptions = {}>(
         opts?: ClientOptions & U & ValidateClientOptions<U>,
     ) => UnboundClient<MergeClientOptions<T, U>>;
+    initialize: FunctionOptions<null, Promise<void>>;
     startSignIn: FunctionOptions<
         StartSignInOptions<T>,
         Promise<FunctionResult<StartSignInResult>>
     >;
     finishSignIn: FunctionOptions<
         FinishSignInOptions<T>,
-        FunctionResult<FinishSignInResult>
+        Promise<FunctionResult<FinishSignInResult>>
     >;
+    getSession: FunctionOptions<null, Promise<FunctionResult<Session>>>;
+    user: Session | null;
 }
 
 /**

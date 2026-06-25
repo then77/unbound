@@ -13,7 +13,7 @@ import type {
  * Creates an Unbound client for starting and finishing authentication flows.
  *
  * @param options - Client configuration options
- * @returns {UnboundClient} An Unbound client.
+ * @returns An Unbound client.
  */
 export function createUnboundClient(): UnboundClient<{}>;
 export function createUnboundClient(
@@ -23,7 +23,7 @@ export function createUnboundClient(
     } & {
         __error: "auto_redirect cannot be true when server is true";
     },
-): UnboundClient<ClientOptions>;
+): UnboundClient<ClientOptions>; // magic type to keep jsdoc working when error
 export function createUnboundClient(
     options: BrowserClientOptions,
 ): UnboundClient<BrowserClientOptions>;
