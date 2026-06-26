@@ -163,7 +163,7 @@ jobs:
               run: pnpm --filter unbound-auth build
 
             - name: Publish
-              run: pnpm --filter unbound-auth publish --no-git-checks
+              run: pnpm --filter unbound-auth publish --no-git-checks --provenance
 
     release:
         name: GitHub Release
