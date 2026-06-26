@@ -1,4 +1,5 @@
 name: Setup CI
+description: Set up node and pnpm for ci
 
 inputs:
     node-version:
