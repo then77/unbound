@@ -53,24 +53,26 @@ export function createClient<T extends ClientOptions>(
           };
 
     async function verifyToken(token: string, check?: boolean) {
-        // check: undefined = default (check on server, skip on browser)
-        // check: true = force check
-        // check: false = skip check
         const shouldCheck = check ?? clientOpts.server;
 
-        if (!shouldCheck) {
-            _state.session = getSessionFromJWT(token);
-        } else {
-            const user = await getUserInfo(
-                token,
-                clientOpts.auth_url!,
-                clientOpts.advanced?.endpoints?.userinfo,
-                clientOpts.fetcher,
-            );
+        try {
+            if (!shouldCheck) {
+                _state.session = getSessionFromJWT(token);
+            } else {
+                const user = await getUserInfo(
+                    token,
+                    clientOpts.auth_url!,
+                    clientOpts.advanced?.endpoints?.userinfo,
+                    clientOpts.fetcher,
+                );
 
-            const session = getSessionFromJWT(token);
-            session.user = user;
-            _state.session = session;
+                const session = getSessionFromJWT(token);
+                session.user = user;
+                _state.session = session;
+            }
+        } catch (error) {
+            _state.session = null;
+            throw error;
         }
     }
 

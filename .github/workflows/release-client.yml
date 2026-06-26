@@ -142,6 +142,9 @@ jobs:
 
             - uses: ./.github/actions/ci-setup
 
+            - name: Build
+              run: pnpm --filter unbound-auth build
+
             - name: Publish
               run: |
                   pnpm changeset publish \
