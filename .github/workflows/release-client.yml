@@ -1,0 +1,180 @@
+name: Release Client
+
+on:
+    push:
+        branches:
+            - "release/client/*"
+    workflow_dispatch:
+
+jobs:
+    check:
+        name: Check release
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        outputs:
+            skip: ${{ steps.check.outputs.skip }}
+            version: ${{ steps.check.outputs.version }}
+            tag: ${{ steps.check.outputs.tag }}
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: false
+
+            - uses: ./.github/actions/ci-setup
+
+            - name: Check
+              id: check
+              shell: bash
+              run: |
+                  BRANCH="${GITHUB_REF#refs/heads/}"
+                  VERSION=$(node -p "require('./packages/client-ts/package.json').version")
+
+                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+                  if [[ "$VERSION" =~ -(alpha|beta|rc|next)\. ]]; then
+                    PRERELEASE=true
+                  else
+                    PRERELEASE=false
+                  fi
+
+                  if [[ "$BRANCH" =~ ^release/client/ ]]; then
+                    if [[ "$PRERELEASE" == "true" ]]; then
+                      echo "skip=true" >> "$GITHUB_OUTPUT"
+                      exit 0
+                    fi
+
+                    echo "tag=latest" >> "$GITHUB_OUTPUT"
+                  fi
+
+                  if [[ "$BRANCH" == "next" ]]; then
+                    if [[ "$PRERELEASE" != "true" ]]; then
+                      echo "skip=true" >> "$GITHUB_OUTPUT"
+                      exit 0
+                    fi
+
+                    echo "tag=next" >> "$GITHUB_OUTPUT"
+                  fi
+
+
+                  # only continue if unbound-auth has changeset
+                  if ! grep -R '"unbound-auth"' .changeset >/dev/null 2>&1; then
+                    echo "skip=true" >> "$GITHUB_OUTPUT"
+                    exit 0
+                  fi
+
+                  echo "skip=false" >> "$GITHUB_OUTPUT"
+
+    version:
+        name: Update version
+        needs: check
+        if: needs.check.outputs.skip != 'true'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: true
+
+            - uses: ./.github/actions/ci-setup
+
+            - name: Version
+              run: pnpm changeset version
+
+            - name: Commit version
+              run: |
+                  git config user.name github-actions
+                  git config user.email github-actions@github.com
+
+                  git add .
+                  git commit \
+                    -m "chore(client): release ${{ needs.check.outputs.version }}" || true
+
+                  git push
+
+    pack:
+        name: Pack release
+        needs: version
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  ref: ${{ github.ref }}
+                  persist-credentials: false
+
+            - uses: ./.github/actions/ci-setup
+
+            - name: Build
+              run: pnpm --filter unbound-auth build
+
+            - name: Pack
+              run: pnpm --filter unbound-auth pack
+
+    publish:
+        name: Publish npm
+        needs:
+            - check
+            - version
+            - pack
+
+        if: needs.check.outputs.skip != 'true'
+
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write
+            contents: read
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  ref: ${{ github.ref }}
+                  persist-credentials: false
+
+            - uses: ./.github/actions/ci-setup
+
+            - name: Build
+              run: pnpm --filter unbound-auth build
+
+            - name: Publish
+              run: |
+                  pnpm changeset publish \
+                    --provenance \
+                    --tag ${{ needs.check.outputs.tag }}
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    release:
+        name: GitHub Release
+        needs:
+            - check
+            - version
+            - pack
+
+        if: needs.check.outputs.skip != 'true'
+
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  ref: ${{ github.ref }}
+                  persist-credentials: false
+
+            - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b #v3.0.1
+              with:
+                  tag_name: v${{ needs.check.outputs.version }}
+                  generate_release_notes: true
+                  prerelease: ${{ contains(needs.check.outputs.version, '-') }}

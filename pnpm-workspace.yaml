@@ -12,3 +12,4 @@ onlyBuiltDependencies:
 
 catalog:
     hono: 4.12.23
+    "@changesets/cli": "^2.31.0"

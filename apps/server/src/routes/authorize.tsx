@@ -223,6 +223,7 @@ app.post(
             return c.json(
                 {
                     error: "invalid_request",
+                    code: "MISSING_CLIENT_ID",
                     error_description: "Missing required parameter: client_id",
                 },
                 400,
@@ -237,6 +238,7 @@ app.post(
                 return c.json(
                     {
                         error: "invalid_grant",
+                        code: "INVALID_CODE",
                         error_description: "Invalid authorization code",
                     },
                     400,
@@ -250,6 +252,7 @@ app.post(
             return c.json(
                 {
                     error: "invalid_grant",
+                    code: "EXPIRED_CODE",
                     error_description: "Authorization code expired",
                 },
                 400,
@@ -264,6 +267,7 @@ app.post(
             return c.json(
                 {
                     error: "invalid_grant",
+                    code: "INVALID_CLIENT_ID",
                     error_description: message,
                 },
                 400,
@@ -274,6 +278,7 @@ app.post(
             return c.json(
                 {
                     error: "invalid_grant",
+                    code: "INVALID_REDIRECT_URI",
                     error_description: "Redirect uri does not match",
                 },
                 400,
@@ -285,6 +290,7 @@ app.post(
                 return c.json(
                     {
                         error: "invalid_grant",
+                        code: "MISSING_VERIFIER",
                         error_description:
                             "Code verifier is required for this code",
                     },
@@ -299,6 +305,7 @@ app.post(
                 return c.json(
                     {
                         error: "invalid_grant",
+                        code: "INVALID_VERIFIER",
                         error_description:
                             "Code verifier does not match code challenge",
                     },
@@ -315,6 +322,7 @@ app.post(
                 return c.json(
                     {
                         error: "invalid_grant",
+                        code: "USED_CODE",
                         error_description: "Authorization code already used",
                     },
                     400,

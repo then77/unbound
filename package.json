@@ -1,14 +1,27 @@
 {
-  "name": "project-unbound",
-  "version": "1.0.0",
-  "private": true,
-  "description": "No signup, privacy focused identity provider. More of stateless auth madness.",
-  "scripts": {
-    "dev": "pnpm --filter @unbound/server --filter @unbound/web dev",
-    "dev:server": "pnpm --filter @unbound/server dev",
-    "dev:web": "pnpm --filter @unbound/web dev"
-  },
-  "keywords": [],
-  "author": "Realzzy",
-  "packageManager": "pnpm@10.14.0"
+    "name": "project-unbound",
+    "version": "1.0.0",
+    "author": "Realzzy <hey@rlzy.me>",
+    "private": true,
+    "description": "Simple, easy to setup, privacy focused auth broker.",
+    "homepage": "https://unbound.rlzy.me",
+    "license": "MIT",
+    "keywords": [
+        "unbound",
+        "auth",
+        "simple-auth"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/then77/unbound.git"
+    },
+    "scripts": {
+        "dev": "pnpm --filter @unbound/server --filter @unbound/web dev",
+        "dev:server": "pnpm --filter @unbound/server dev",
+        "dev:web": "pnpm --filter @unbound/web dev"
+    },
+    "packageManager": "pnpm@10.14.0",
+    "devDependencies": {
+        "@changesets/cli": "catalog:"
+    }
 }

@@ -1,0 +1,1 @@
+export { browserStorageAdapter } from "@/adapters/browser";
