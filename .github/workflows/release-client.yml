@@ -147,7 +147,6 @@ jobs:
             - name: Publish
               run: |
                   pnpm changeset publish \
-                    --provenance \
                     --tag ${{ needs.check.outputs.tag }}
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
