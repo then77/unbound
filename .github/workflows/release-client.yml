@@ -42,25 +42,30 @@ jobs:
 
                   if [[ "$BRANCH" =~ ^release/client/ ]]; then
                     if [[ "$PRERELEASE" == "true" ]]; then
+                      echo "SKIP: Prerelease version on release branch ($BRANCH)"
                       echo "skip=true" >> "$GITHUB_OUTPUT"
                       exit 0
                     fi
 
+                    echo "Release branch detected, using latest tag"
                     echo "tag=latest" >> "$GITHUB_OUTPUT"
                   fi
 
                   if [[ "$BRANCH" == "next" ]]; then
                     if [[ "$PRERELEASE" != "true" ]]; then
+                      echo "SKIP: Stable version on next branch"
                       echo "skip=true" >> "$GITHUB_OUTPUT"
                       exit 0
                     fi
 
+                    echo "Next branch detected, using next tag"
                     echo "tag=next" >> "$GITHUB_OUTPUT"
                   fi
 
 
                   # only continue if unbound-auth has changeset
                   if ! grep -R '"unbound-auth"' .changeset >/dev/null 2>&1; then
+                    echo "SKIP: No changeset found for unbound-auth"
                     echo "skip=true" >> "$GITHUB_OUTPUT"
                     exit 0
                   fi
