@@ -1,0 +1,10 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "unbound-auth": "0.1.0"
+  },
+  "changesets": [
+    "fluffy-peas-guess"
+  ]
+}
