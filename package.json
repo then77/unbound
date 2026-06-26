@@ -1,14 +1,17 @@
 {
-  "name": "project-unbound",
-  "version": "1.0.0",
-  "private": true,
-  "description": "No signup, privacy focused identity provider. More of stateless auth madness.",
-  "scripts": {
-    "dev": "pnpm --filter @unbound/server --filter @unbound/web dev",
-    "dev:server": "pnpm --filter @unbound/server dev",
-    "dev:web": "pnpm --filter @unbound/web dev"
-  },
-  "keywords": [],
-  "author": "Realzzy",
-  "packageManager": "pnpm@10.14.0"
+    "name": "project-unbound",
+    "version": "1.0.0",
+    "private": true,
+    "description": "No signup, privacy focused identity provider. More of stateless auth madness.",
+    "scripts": {
+        "dev": "pnpm --filter @unbound/server --filter @unbound/web dev",
+        "dev:server": "pnpm --filter @unbound/server dev",
+        "dev:web": "pnpm --filter @unbound/web dev"
+    },
+    "keywords": [],
+    "author": "Realzzy",
+    "packageManager": "pnpm@10.14.0",
+    "devDependencies": {
+        "@changesets/cli": "catalog:"
+    }
 }
