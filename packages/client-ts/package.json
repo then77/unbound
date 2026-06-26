@@ -1,24 +1,37 @@
 {
     "name": "unbound-auth",
     "version": "0.1.0",
-    "description": "Javascript client to simplify using Unbound Auth",
+    "author": "Realzzy <hey@rlzy.me>",
+    "description": "Javascript auth client for Unbound.",
+    "homepage": "https://docs.unbound.rlzy.me",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/then77/unbound.git"
+    },
     "type": "module",
+    "keywords": [
+        "unbound",
+        "auth",
+        "simple-auth"
+    ],
     "scripts": {
         "lint": "oxlint",
         "build": "pnpm lint && tsdown",
         "build:watch": "tsdown --watch"
     },
-    "keywords": [
-        "unbound",
-        "auth"
-    ],
-    "author": "Realzzy",
     "packageManager": "pnpm@10.14.0",
+    "main": "./dist/index.js",
+    "types": "./dist/index.js",
+    "files": [
+        "dist"
+    ],
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js",
-            "require": "./dist/index.cjs"
+            "require": "./dist/index.cjs",
+            "unpkg": "./dist/unbound.min.js"
         },
         "./adapters": {
             "types": "./dist/adapters/index.d.ts",
