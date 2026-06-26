@@ -163,7 +163,7 @@ jobs:
               run: pnpm --filter unbound-auth build
 
             - name: Publish
-              run: pnpm --filter unbound-auth publish
+              run: pnpm --filter unbound-auth publish --no-git-checks
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
