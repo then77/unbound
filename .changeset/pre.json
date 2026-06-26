@@ -8,6 +8,7 @@
     "@unbound/types": "1.0.0"
   },
   "changesets": [
+    "fair-feet-poke",
     "witty-parents-rule"
   ]
 }
