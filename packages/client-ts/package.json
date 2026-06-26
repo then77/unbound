@@ -22,7 +22,7 @@
     },
     "packageManager": "pnpm@10.14.0",
     "main": "./dist/index.js",
-    "types": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "files": [
         "dist"
     ],

@@ -239,7 +239,7 @@ export function createClient<T extends ClientOptions>(
                     await storage.remove("state");
                     await storage.remove("verifier");
                     await verifyToken(access_token);
-                    storage.set("token", access_token);
+                    await storage.set("token", access_token);
 
                     if (redirectTo && !clientOpts.server && isBrowser()) {
                         window.location.replace(redirectTo);
