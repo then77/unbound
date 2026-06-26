@@ -1,8 +1,13 @@
 {
-    "mode": "pre",
-    "tag": "alpha",
-    "initialVersions": {
-        "unbound-auth": "0.1.0"
-    },
-    "changesets": []
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "unbound-auth": "0.1.0",
+    "@unbound/server": "1.0.0",
+    "@unbound/web": "1.0.0",
+    "@unbound/types": "1.0.0"
+  },
+  "changesets": [
+    "witty-parents-rule"
+  ]
 }
