@@ -107,7 +107,7 @@ export interface ClientOptions {
         endpoints?: {
             authorization?: string;
             token?: string;
-            keys?: string;
+            userinfo?: string;
         };
     };
 }
@@ -142,7 +142,6 @@ export type MergeClientOptions<
 
 export type ClientState = {
     init: boolean;
-    jwks: PublicJWK[] | null;
     state: State;
 };
 
@@ -274,7 +273,7 @@ export type GetSessionOptions = {
      * Whether to verify the session token against the auth server's JWKs.
      *
      * When enabled, throws `AuthUnboundError` or `APIUnboundError` if verification fails.
-     * 
+     *
      * Recommended and by default enabled on server environment.
      */
     verify?: boolean;
@@ -301,6 +300,18 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
     clone: <U extends ClientOptions = {}>(
         opts?: ClientOptions & U & ValidateClientOptions<U>,
     ) => UnboundClient<MergeClientOptions<T, U>>;
+    /**
+     * Current client configuration.
+     *
+     * Returns a readonly copy of the configuration. Use the setter to update.
+     *
+     * @example
+     * ```ts
+     * console.log(client.config.auth_url);
+     * client.config = { auth_url: 'https://new-auth.example.com' };
+     * ```
+     */
+    config: Readonly<T>;
     /**
      * Initializes the client by loading stored session and auth state.
      *

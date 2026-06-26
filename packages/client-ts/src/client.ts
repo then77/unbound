@@ -1,7 +1,6 @@
 import { browserStorageAdapter } from "@/adapters";
 import {
-    fetchJWKS,
-    verifyJWT,
+    getUserInfo,
     getSessionFromJWT,
     generateAuthUrl,
     exchangeCode,
@@ -19,7 +18,6 @@ import type {
     UnboundClient,
     FinishSignInOptions,
     StartSignInOptions,
-    PublicJWK,
     Session,
     GetSessionOptions,
     SetSessionOptions,
@@ -33,7 +31,7 @@ const defaultClientOptions: ClientOptions = {
         endpoints: {
             authorization: "/authorize",
             token: "/token",
-            keys: "/.well-known/jwks.json",
+            userinfo: "/userinfo",
         },
     },
 };
@@ -42,11 +40,10 @@ export function createClient<T extends ClientOptions>(
     options: T,
     state?: ClientState,
 ): UnboundClient<T> {
-    const clientOpts = { ...defaultClientOptions, ...options };
+    let clientOpts = { ...defaultClientOptions, ...options };
 
     const storage = clientOpts.storage!;
     let _init = state?.init ?? false;
-    let _jwks: PublicJWK[] | null = null;
     const _state: State = state
         ? { ...state.state }
         : {
@@ -56,17 +53,24 @@ export function createClient<T extends ClientOptions>(
           };
 
     async function verifyToken(token: string, check?: boolean) {
-        if (check ?? clientOpts.server) {
-            _jwks ??= await fetchJWKS(
+        // check: undefined = default (check on server, skip on browser)
+        // check: true = force check
+        // check: false = skip check
+        const shouldCheck = check ?? clientOpts.server;
+
+        if (!shouldCheck) {
+            _state.session = getSessionFromJWT(token);
+        } else {
+            const user = await getUserInfo(
+                token,
                 clientOpts.auth_url!,
-                clientOpts.advanced?.endpoints?.keys,
+                clientOpts.advanced?.endpoints?.userinfo,
                 clientOpts.fetcher,
             );
 
-            await verifyJWT(token, _jwks);
-            _state.session = getSessionFromJWT(token);
-        } else {
-            _state.session = getSessionFromJWT(token);
+            const session = getSessionFromJWT(token);
+            session.user = user;
+            _state.session = session;
         }
     }
 
@@ -91,12 +95,18 @@ export function createClient<T extends ClientOptions>(
     ) =>
         createClient<MergeClientOptions<T, U>>(
             { ...clientOpts, ...opts } as unknown as MergeClientOptions<T, U>,
-            { init: _init, jwks: _jwks, state: _state },
+            { init: _init, state: _state },
         )) as UnboundClient<T>["clone"];
 
-    return {
+    const client = {
         clone,
         initialize,
+        get config(): Readonly<T> {
+            return clientOpts as T;
+        },
+        set config(newConfig: Partial<T>) {
+            clientOpts = { ...clientOpts, ...newConfig } as typeof clientOpts;
+        },
         startSignIn: async (opts?: StartSignInOptions<T>) => {
             try {
                 await initialize();
@@ -229,6 +239,7 @@ export function createClient<T extends ClientOptions>(
                     await storage.remove("state");
                     await storage.remove("verifier");
                     await verifyToken(access_token);
+                    storage.set("token", access_token);
 
                     if (redirectTo && !clientOpts.server && isBrowser()) {
                         window.location.replace(redirectTo);
@@ -284,4 +295,45 @@ export function createClient<T extends ClientOptions>(
             return _state.session;
         },
     };
+
+    // Auto handle finish sign in
+    const preCheckFinishSignIn = () => {
+        const redirectUri = getRedirectUri(clientOpts?.redirect_uri ?? null);
+        if (!redirectUri) return;
+
+        const currentUrl = new URL(window.location.href);
+        const targetUrl = new URL(redirectUri);
+
+        if (
+            currentUrl.origin !== targetUrl.origin ||
+            currentUrl.pathname !== targetUrl.pathname
+        ) {
+            return;
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const state = params.get("state");
+        const code = params.get("code");
+
+        if (code && state) {
+            void (async () => {
+                try {
+                    await client.finishSignIn();
+                } catch {}
+            })();
+        }
+    };
+
+    setTimeout(() => {
+        if (
+            clientOpts.auto_redirect &&
+            clientOpts.redirect_to &&
+            !clientOpts.server &&
+            isBrowser()
+        ) {
+            preCheckFinishSignIn();
+        }
+    }, 50);
+
+    return client;
 }

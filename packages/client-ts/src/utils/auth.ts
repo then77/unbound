@@ -1,114 +1,96 @@
-import { decodeJwt, decodeProtectedHeader, importJWK, jwtVerify } from "jose";
-import type { PublicJWK, Session, FinishSignInResult, Scope } from "@/types";
+import { decodeJwt } from "jose";
+import type { Session, FinishSignInResult, Scope } from "@/types";
 import { AuthUnboundError, type AuthUnboundErrorCode } from "@/exceptions/auth";
 import { APIUnboundError } from "@/exceptions/api";
 
 /**
- * Fetches the JSON Web Keys from auth server.
+ * Verify token and get user info.
  *
+ * @param token - Access token to verify.
  * @param authUrl - Base auth server URL.
- * @param endpoint - JWKS endpoint path or URL, resolved against `authUrl`.
+ * @param endpoint - Userinfo endpoint path or URL, resolved against `authUrl`.
  * @param fetcher - Fetch implementation to use for the request.
- * @returns The public JWKs.
- * @throws {APIUnboundError} When the request fails or response is invalid.
+ * @returns User information from the token.
+ * @throws {AuthUnboundError} When the token is invalid or expired.
+ * @throws {APIUnboundError} When the request fails.
  */
-export async function fetchJWKS(
+export async function getUserInfo(
+    token: string,
     authUrl: string,
     endpoint?: string,
     fetcher?: typeof fetch,
-): Promise<PublicJWK[]> {
+): Promise<NonNullable<Session["user"]>> {
     fetcher = fetcher ?? fetch;
-    const url = new URL(endpoint ?? "/.well-known/jwks.json", authUrl);
+    const url = new URL(endpoint ?? "/userinfo", authUrl);
 
     try {
         const res = await fetcher(url, {
             method: "GET",
             headers: {
+                authorization: `Bearer ${token}`,
                 accept: "application/json",
             },
         });
 
         if (!res.ok) {
-            throw new APIUnboundError(
-                "SERVER_ERROR",
-                res.status,
-                `Failed to fetch JWKS: ${res.status}`,
-            );
-        }
+            if (res.status === 401) {
+                const contentType = res.headers.get("content-type");
+                if (contentType?.toLowerCase().includes("application/json")) {
+                    try {
+                        const json = await res.json();
+                        const errorDesc = json?.error_description || "";
+                        if (errorDesc.toLowerCase().includes("expired")) {
+                            throw new AuthUnboundError("EXPIRED_TOKEN");
+                        }
+                    } catch (error) {
+                        if (error instanceof AuthUnboundError) {
+                            throw error;
+                        }
+                    }
+                }
+                throw new AuthUnboundError("INVALID_TOKEN");
+            }
 
-        const contentType = res.headers.get("content-type");
-        if (
-            !contentType ||
-            !contentType.toLowerCase().includes("application/json")
-        ) {
             throw new APIUnboundError(
                 "SERVER_ERROR",
                 res.status,
-                "Invalid content-type for JWKS response",
+                `Userinfo request failed with status ${res.status}`,
             );
         }
 
         const json = await res.json();
-        if (
-            !json ||
-            !json.keys ||
-            !Array.isArray(json.keys) ||
-            json.keys.length === 0
-        ) {
+        if (!json?.sub || typeof json.sub !== "string") {
             throw new APIUnboundError(
                 "SERVER_ERROR",
                 res.status,
-                "Invalid JWKS response format",
+                "Invalid userinfo response format",
             );
         }
-        return json.keys as PublicJWK[];
+
+        const user: NonNullable<Session["user"]> = {
+            id: json.sub,
+        };
+
+        if (typeof json.name === "string") user.name = json.name;
+        if (typeof json.picture === "string") user.picture = json.picture;
+        if (typeof json.email === "string") user.email = json.email;
+        if (typeof json.email_verified === "boolean")
+            user.email_verified = json.email_verified;
+
+        return user;
     } catch (error) {
-        if (error instanceof APIUnboundError) {
+        if (
+            error instanceof AuthUnboundError ||
+            error instanceof APIUnboundError
+        ) {
             throw error;
         }
         throw new APIUnboundError(
             "NETWORK_ERROR",
             undefined,
-            "Failed to fetch JWKS",
+            "Failed to verify token with userinfo",
             error,
         );
-    }
-}
-
-/**
- * Verifies an ES256 JWT against a list of public JWKs.
- *
- * @param jwt - JWT to verify.
- * @param jwks - Public JWKs used to find the signing key by `kid`.
- * @throws {AuthUnboundError} When the token is invalid or verification fails.
- */
-export async function verifyJWT(jwt: string, jwks: PublicJWK[]): Promise<void> {
-    try {
-        const header = decodeProtectedHeader(jwt);
-        if (header.alg !== "ES256") {
-            throw new AuthUnboundError(
-                "INVALID_TOKEN",
-                "Unsupported algorithm",
-            );
-        }
-
-        const jwk = jwks.find((x) => x.kid === header.kid);
-        if (!jwk) {
-            throw new AuthUnboundError(
-                "INVALID_TOKEN",
-                "Key not found in JWKS",
-            );
-        }
-
-        const key = await importJWK(jwk, header.alg);
-        await jwtVerify(jwt, key, {
-            algorithms: ["ES256"],
-        });
-    } catch (error) {
-        if (error instanceof AuthUnboundError) {
-            throw error;
-        }
-        throw new AuthUnboundError("INVALID_TOKEN", "JWT verification failed");
     }
 }
 
@@ -181,7 +163,8 @@ export function generateAuthUrl(
         "client_id",
         `origin:${new URL(params.redirect_uri).origin}`,
     );
-    url.searchParams.set("scopes", params.scopes.join(" "));
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("scope", params.scopes.join(" "));
     url.searchParams.set("redirect_uri", params.redirect_uri);
     url.searchParams.set("code_challenge_method", "S256");
     url.searchParams.set("code_challenge", params.challenge);

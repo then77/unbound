@@ -48,9 +48,13 @@ export type {
     Session,
     ClientOptions,
     UnboundClient,
+    StorageAdapter,
+    StorageAdapterKey,
     StartSignInOptions,
     StartSignInResult,
     FinishSignInOptions,
     FinishSignInResult,
+    GetSessionOptions,
+    SetSessionOptions,
     PublicJWK,
 } from "@/types";

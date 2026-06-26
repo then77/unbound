@@ -1,4 +1,4 @@
-import { UnboundError } from "@/exceptions";
+import { UnboundError } from "@/exceptions/base";
 
 /**
  * Known authorization and token flow failures for auth error.

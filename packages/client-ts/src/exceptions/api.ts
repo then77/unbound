@@ -1,4 +1,4 @@
-import { UnboundError } from "@/exceptions";
+import { UnboundError } from "@/exceptions/base";
 
 /**
  * API request failures that are not known auth-flow errors.

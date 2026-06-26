@@ -32,9 +32,10 @@ type UnboundBrowserClient = {
     [K in ClientMethodKeys]: Client[K];
 } & {
     user: Session | null;
+    config: Readonly<ClientBrowserOptions>;
 };
 
-export const Unbound: UnboundBrowserClient = {
+const Unbound: UnboundBrowserClient = {
     create: <T extends ClientBrowserOptions = ClientBrowserOptions>(opts?: T) =>
         createUnboundClient({
             auto_redirect: true,
@@ -50,4 +51,12 @@ export const Unbound: UnboundBrowserClient = {
     get user() {
         return defaultClient.user;
     },
+    get config() {
+        return defaultClient.config;
+    },
+    set config(newConfig) {
+        defaultClient.config = newConfig;
+    },
 };
+
+export default Unbound;
