@@ -260,10 +260,7 @@ export function createClient<T extends ClientOptions>(
                 await initialize();
 
                 if (!_state.session) return ok(null);
-                await verifyToken(
-                    _state.session.access_token,
-                    opts?.verify ?? false,
-                );
+                await verifyToken(_state.session.access_token, opts?.verify);
 
                 return ok(_state.session);
             } catch (error) {

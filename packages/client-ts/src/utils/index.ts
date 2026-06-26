@@ -17,9 +17,15 @@ export function fail(
 
 // Determine if in browser environment
 export function isBrowser() {
-    return (
-        typeof window !== "undefined" && window.location && window.localStorage
-    );
+    try {
+        return (
+            typeof window !== "undefined" &&
+            window.location &&
+            window.localStorage
+        );
+    } catch {
+        return false;
+    }
 }
 
 /**
