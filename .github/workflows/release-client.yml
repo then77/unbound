@@ -166,6 +166,7 @@ jobs:
               run: pnpm --filter unbound-auth publish --no-git-checks
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     release:
         name: GitHub Release
@@ -191,4 +192,4 @@ jobs:
               with:
                   tag_name: v${{ needs.version.outputs.version }}
                   generate_release_notes: true
-                  prerelease: ${{ needs.check.outputs.tag == 'next' }}
+                  prerelease: ${{ needs.check.outputs.tag != 'latest' }}
