@@ -324,16 +324,17 @@ export function createClient<T extends ClientOptions>(
         }
     };
 
-    setTimeout(() => {
-        if (
-            clientOpts.auto_redirect &&
-            clientOpts.redirect_to &&
-            !clientOpts.server &&
-            isBrowser()
-        ) {
-            preCheckFinishSignIn();
-        }
-    }, 50);
+    if (!clientOpts.server && isBrowser()) {
+        // In browser environment, auto initialize
+        initialize();
+
+        // Also auto handle finish sign in
+        setTimeout(() => {
+            if (clientOpts.auto_redirect && clientOpts.redirect_to) {
+                preCheckFinishSignIn();
+            }
+        }, 50);
+    }
 
     return client;
 }
