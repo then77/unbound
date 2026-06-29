@@ -43,11 +43,13 @@ const Unbound: UnboundBrowserClient = {
             ...opts,
         } as BrowserClientOptions<T>) as UnboundClient<BrowserClientOptions<T>>,
     clone: defaultClient.clone.bind(defaultClient),
+    on: defaultClient.on.bind(defaultClient),
     initialize: defaultClient.initialize.bind(defaultClient),
     startSignIn: defaultClient.startSignIn.bind(defaultClient),
     finishSignIn: defaultClient.finishSignIn.bind(defaultClient),
     getSession: defaultClient.getSession.bind(defaultClient),
     setSession: defaultClient.setSession.bind(defaultClient),
+    logout: defaultClient.logout.bind(defaultClient),
     get user() {
         return defaultClient.user;
     },
