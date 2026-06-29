@@ -198,12 +198,22 @@ export function createClient<T extends ClientOptions>(
             >);
 
         listeners.add(callback);
-        return;
+
+    };
+
+    const off = <K extends keyof AuthEvents>(
+        event: K,
+        callback: (payload: AuthEvents[K]) => void,
+    ) => {
+        _listeners[event]?.delete(
+            callback as (payload: AuthEvents[keyof AuthEvents]) => void,
+        );
     };
 
     const client = {
         clone,
         on,
+        off,
         initialize,
         get user(): Session | null {
             return _state.session;
@@ -356,7 +366,7 @@ export function createClient<T extends ClientOptions>(
                         token: access_token,
                     });
 
-                    const session = getSessionFromJWT(access_token);
+                    const session = _state.session!;
 
                     if (session.expires_in) {
                         scheduleLogoutTimer(session.expires_in);

@@ -344,6 +344,26 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
         callback: (payload: AuthEvents[K]) => void,
     ) => void;
     /**
+     * Unsubscribe a previously registered event listener.
+     *
+     * @param event - The event to unsubscribe from.
+     * @param callback - The exact callback reference passed to {@link on}.
+     *
+     * @example
+     * ```ts
+     * const handler = ({ session }: AuthEvents['auth']) => {
+     *   console.log('Signed in:', session.user?.name);
+     * };
+     *
+     * client.on('auth', handler);
+     * client.off('auth', handler);
+     * ```
+     */
+    off: <K extends keyof AuthEvents>(
+        event: K,
+        callback: (payload: AuthEvents[K]) => void,
+    ) => void;
+    /**
      * Current client configuration.
      *
      * Returns a readonly copy of the configuration. Use the setter to update.
