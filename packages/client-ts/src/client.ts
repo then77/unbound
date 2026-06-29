@@ -1,4 +1,4 @@
-import { browserStorageAdapter } from "@/adapters";
+import { browserStorageAdapter } from "@/adapters/browser";
 import {
     getUserInfo,
     getSessionFromJWT,

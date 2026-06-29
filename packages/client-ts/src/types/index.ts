@@ -33,7 +33,7 @@ export interface StorageAdapterBatch {
     /** Performs batch read operations. */
     query(
         keys: StorageAdapterKey[],
-    ): Promise<Record<StorageAdapterKey, string | null>>;
+    ): Promise<Partial<Record<StorageAdapterKey, string | null>>>;
     /**
      * Performs batch write operations.
      * Sets values when provided as strings, removes keys when set to `null`.
