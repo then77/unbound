@@ -334,7 +334,7 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
      *
      * @example
      * ```ts
-     * client.on('authenticated', ({ session }) => {
+     * client.on('auth', ({ session }) => {
      *   console.log('Signed in:', session.user?.name);
      * });
      * ```
