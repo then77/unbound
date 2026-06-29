@@ -434,6 +434,9 @@ export function createClient<T extends ClientOptions>(
         logout: async () => {
             try {
                 await initialize();
+
+                if (!_state.session) return ok(null);
+
                 const storage = getStorage();
 
                 _state.session = null;
