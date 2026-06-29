@@ -6,7 +6,7 @@
         "paths": {
             "@/*": ["./src/*"],
         },
-        "types": [],
+        "types": ["node"],
     },
     "include": ["./src/**/*.ts", "./tsdown.config.ts"],
     "exclude": ["node_modules", "dist"],

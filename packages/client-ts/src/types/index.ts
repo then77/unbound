@@ -14,11 +14,36 @@ export type StorageAdapterKey =
     /* Key for login state */
     | "state";
 
-export interface StorageAdapter {
+/**
+ * Storage adapter interface for individual key-value operations.
+ */
+export interface StorageAdapterSingle {
     get(key: StorageAdapterKey): Promise<string | null>;
     set(key: StorageAdapterKey, value: string): Promise<void>;
     remove(key: StorageAdapterKey): Promise<void>;
 }
+
+/**
+ * Storage adapter interface for batched key-value operations.
+ * Useful for more efficient bulk reads and writes.
+ *
+ * Recommended to implement this if storage support batch operations.
+ */
+export interface StorageAdapterBatch {
+    /** Performs batch read operations. */
+    query(
+        keys: StorageAdapterKey[],
+    ): Promise<Partial<Record<StorageAdapterKey, string | null>>>;
+    /**
+     * Performs batch write operations.
+     * Sets values when provided as strings, removes keys when set to `null`.
+     */
+    mutate(
+        values: Partial<Record<StorageAdapterKey, string | null>>,
+    ): Promise<void>;
+}
+export type StorageAdapter = StorageAdapterSingle &
+    Partial<StorageAdapterBatch>;
 
 /**
  * Options used to configure an Unbound client.

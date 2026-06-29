@@ -1,4 +1,4 @@
-import { browserStorageAdapter } from "@/adapters";
+import { browserStorageAdapter } from "@/adapters/browser";
 import {
     getUserInfo,
     getSessionFromJWT,
@@ -21,6 +21,8 @@ import type {
     Session,
     GetSessionOptions,
     SetSessionOptions,
+    StorageAdapterBatch,
+    StorageAdapterKey,
 } from "@/types";
 
 const defaultClientOptions: ClientOptions = {
@@ -42,7 +44,6 @@ export function createClient<T extends ClientOptions>(
 ): UnboundClient<T> {
     let clientOpts = { ...defaultClientOptions, ...options };
 
-    const storage = clientOpts.storage!;
     let _init = state?.init ?? false;
     const _state: State = state
         ? { ...state.state }
@@ -51,6 +52,43 @@ export function createClient<T extends ClientOptions>(
               verifier: null,
               state: null,
           };
+
+    function getStorage(): StorageAdapterBatch {
+        const storage = clientOpts.storage!;
+        return {
+            query: async (keys) => {
+                // Use batch query if available, otherwise fall back to individual gets
+                if (storage.query) {
+                    return storage.query(keys);
+                }
+
+                const result: Partial<
+                    Record<StorageAdapterKey, string | null>
+                > = {};
+                for (const key of keys) {
+                    result[key] = await storage.get(key);
+                }
+                return result;
+            },
+            mutate: async (values) => {
+                // Use batch mutate if available, otherwise fall back to individual set/remove
+                if (storage.mutate) {
+                    return storage.mutate(values);
+                }
+
+                for (const [key, value] of Object.entries(values) as [
+                    StorageAdapterKey,
+                    string | null,
+                ][]) {
+                    if (value === null) {
+                        await storage.remove(key);
+                    } else {
+                        await storage.set(key, value);
+                    }
+                }
+            },
+        };
+    }
 
     async function verifyToken(token: string, check?: boolean) {
         const shouldCheck = check ?? clientOpts.server;
@@ -79,11 +117,13 @@ export function createClient<T extends ClientOptions>(
     async function initialize() {
         if (_init) return;
 
-        _state.verifier ??= await storage?.get("verifier");
-        _state.state ??= await storage?.get("state");
+        const storage = getStorage();
+        const data = await storage.query(["verifier", "state", "token"]);
 
-        const token =
-            _state.session?.access_token ?? (await storage?.get("token"));
+        _state.verifier ??= data.verifier ?? null;
+        _state.state ??= data.state ?? null;
+
+        const token = _state.session?.access_token ?? data.token ?? null;
         if (token && !_state.session) {
             try {
                 await verifyToken(token);
@@ -133,10 +173,14 @@ export function createClient<T extends ClientOptions>(
                 const state = generateRandomString();
                 const { challenge, verifier } = await generatePKCE();
 
+                const storage = getStorage();
+
                 _state.state = state;
                 _state.verifier = verifier;
-                await storage.set("state", state);
-                await storage.set("verifier", verifier);
+                await storage.mutate({
+                    state,
+                    verifier,
+                });
 
                 const url = generateAuthUrl(
                     {
@@ -236,12 +280,16 @@ export function createClient<T extends ClientOptions>(
                         clientOpts?.fetcher,
                     );
 
+                    const storage = getStorage();
+
                     _state.state = null;
                     _state.verifier = null;
-                    await storage.remove("state");
-                    await storage.remove("verifier");
                     await verifyToken(access_token);
-                    await storage.set("token", access_token);
+                    await storage.mutate({
+                        state: null,
+                        verifier: null,
+                        token: access_token,
+                    });
 
                     if (redirectTo && !clientOpts.server && isBrowser()) {
                         window.location.replace(redirectTo);
@@ -278,8 +326,12 @@ export function createClient<T extends ClientOptions>(
                     return fail(new AuthUnboundError("MISSING_TOKEN"));
                 }
 
+                const storage = getStorage();
+
                 await verifyToken(token, opts.verify ?? false);
-                await storage.set("token", token);
+                await storage.mutate({
+                    token,
+                });
 
                 if (!_state.session) {
                     return fail(new AuthUnboundError("INVALID_TOKEN"));
