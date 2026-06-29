@@ -112,10 +112,15 @@ export function createClient<T extends ClientOptions>(
     function scheduleLogoutTimer(expiresIn: number) {
         if (clientOpts.server || !isBrowser()) return;
         clearLogoutTimer();
-        _expiration = setTimeout(
-            () => emit("logout", { reason: "expired" }),
-            expiresIn * 1000,
-        );
+        _expiration = setTimeout(async () => {
+            _expiration = null;
+            _state.session = null;
+
+            const storage = getStorage();
+            await storage.mutate({ token: null });
+
+            emit("logout", { reason: "expired" });
+        }, expiresIn * 1000);
     }
 
     async function verifyToken(token: string, check?: boolean) {
@@ -198,7 +203,6 @@ export function createClient<T extends ClientOptions>(
             >);
 
         listeners.add(callback);
-
     };
 
     const off = <K extends keyof AuthEvents>(
