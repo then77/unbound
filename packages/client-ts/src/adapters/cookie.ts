@@ -92,6 +92,18 @@ function createAdapter(
 
         const jwtAge = key === "token" ? getJWTExpiration(value) : null;
 
+        // If the JWT is already expired, emit a deletion cookie
+        // rather than persisting a dead token.
+        if (jwtAge === 0) {
+            return {
+                name,
+                value: "",
+                maxAge: 0,
+                path: cookieOpts?.path ?? "/",
+                domain: cookieOpts?.domain,
+            };
+        }
+
         return {
             name,
             value,
