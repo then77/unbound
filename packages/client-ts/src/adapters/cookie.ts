@@ -155,28 +155,133 @@ function createAdapter(
     };
 }
 
+/**
+ * Creates a cookie-based middleware for persisting Unbound auth state
+ * in HTTP-only cookies.
+ *
+ * This overload returns a middleware function compatible with Express
+ * and Node.js HTTP servers. The middleware attaches a request-scoped
+ * auth client to `req.auth` on every request.
+ *
+ * For other server frameworks, see the direct usage overload or
+ * @see {@link https://docs.unbound.rlzy.me/use-on-server}
+ *
+ * @example
+ * ```ts
+ * // Express middleware
+ * app.use(cookieStorageAdapter(client));
+ *
+ * app.get('/api/user', async (req, res) => {
+ *   const session = await req.auth.getSession();
+ *   res.json(session);
+ * });
+ * ```
+ *
+ * @param auth - The Unbound client instance.
+ * @param options - Cookie storage adapter options.
+ * @returns A middleware function that attaches the auth client to `req.auth`.
+ */
 export function cookieStorageAdapter(
     auth: UnboundClient,
-): (req: RequestLike, res: ResponseLike) => UnboundClient;
+    options?: CookieStorageProps,
+): (req: RequestLike, res: ResponseLike, next?: () => void) => void;
+/**
+ * Creates a cookie-based auth client bound to a specific
+ * request/response pair.
+ *
+ * This overload is useful when you need a one-off auth client for a
+ * single route handler, or when working with frameworks that don't
+ * support Express-style middleware (e.g. Next.js API routes, plain
+ * Node.js `http`).
+ *
+ * For other server frameworks,
+ * @see {@link https://docs.unbound.rlzy.me/use-on-server}
+ *
+ * @example
+ * ```ts
+ * // Express route handler
+ * app.get('/api/auth', (req, res) => {
+ *   const auth = cookieStorageAdapter(client, req, res);
+ *   const session = await auth.getSession();
+ * });
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Next.js Pages API route
+ * export default function handler(req, res) {
+ *   const auth = cookieStorageAdapter(client, req, res);
+ *   const session = await auth.getSession();
+ * }
+ * ```
+ *
+ * @param auth - The Unbound client instance.
+ * @param req - The incoming HTTP request (`Request` or `IncomingMessage`).
+ * @param res - The outgoing HTTP response (`Response` or `ServerResponse`).
+ * @param options - Cookie storage adapter options.
+ * @returns A new Unbound client with cookie storage configured.
+ */
 export function cookieStorageAdapter(
     auth: UnboundClient,
     req: RequestLike,
     res: ResponseLike,
+    options?: CookieStorageProps,
 ): UnboundClient;
 export function cookieStorageAdapter(
     auth: UnboundClient,
-    req?: RequestLike,
+    reqOrOptions?: RequestLike | CookieStorageProps,
     res?: ResponseLike,
-): ((req: RequestLike, res: ResponseLike) => UnboundClient) | UnboundClient {
-    if (!req || !res) {
-        return (req: RequestLike, res: ResponseLike) => {
-            return auth.clone({
-                storage: createAdapter(req, res),
+    options?: CookieStorageProps,
+):
+    | ((req: RequestLike, res: ResponseLike, next?: () => void) => void)
+    | UnboundClient {
+    // Middleware usage: cookieStorageAdapter(auth, options?)
+    if (
+        !reqOrOptions ||
+        (!res &&
+            typeof reqOrOptions === "object" &&
+            !("headers" in reqOrOptions))
+    ) {
+        const opts = reqOrOptions as CookieStorageProps | undefined;
+        return (req: RequestLike, res: ResponseLike, next?: () => void) => {
+            // Attach auth client to request object
+            (req as any).auth = auth.clone({
+                storage: createAdapter(req, res, opts),
             });
+            if (next) next();
         };
     }
 
+    // Direct usage: cookieStorageAdapter(auth, req, res, options?)
+    const req = reqOrOptions as RequestLike;
+    if (!res) {
+        throw new Error("Response object is required when using direct mode");
+    }
     return auth.clone({
-        storage: createAdapter(req, res),
+        storage: createAdapter(req, res, options),
     });
+}
+
+/**
+ * Type augmentation for `req.auth` when using the adapter as middleware.
+ *
+ * For Express, typing is provided automatically.
+ * For plain Node.js `http`, augment `IncomingMessage` below.
+ *
+ * Or cast manually:
+ * ```ts
+ * const auth = (req as any).auth as UnboundClient;
+ * ```
+ */
+declare global {
+    namespace Express {
+        interface Request {
+            auth?: UnboundClient;
+        }
+    }
+}
+declare module "http" {
+    interface IncomingMessage {
+        auth?: UnboundClient;
+    }
 }
