@@ -20,7 +20,7 @@ export function validateCookieName(name: string) {
     }
 }
 export function validateCookieValue(value: string) {
-    if (/^[\u0021-\u003A\u003C-\u007E]*$/.test(value)) {
+    if (!/^[\u0021-\u003A\u003C-\u007E]*$/.test(value)) {
         throw new TypeError("Invalid cookie value");
     }
 }
@@ -31,7 +31,7 @@ export function parseCookie(input?: string | null): CookieRecord[] {
 
     for (const part of input.split(";")) {
         const index = part.indexOf("=");
-        if (!index || index <= 0) continue;
+        if (index <= 0) continue;
 
         const name = part.slice(0, index).trim();
         const value = part.slice(index + 1).trim();
@@ -54,7 +54,9 @@ export function buildCookie(cookie: CookieSerialize): string {
     const { name, value, ...options } = cookie;
 
     validateCookieName(name);
-    validateCookieValue(value);
+    if (value !== "") {
+        validateCookieValue(value);
+    }
 
     let result = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
 
