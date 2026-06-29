@@ -23,6 +23,7 @@ import type {
     SetSessionOptions,
     StorageAdapterBatch,
     StorageAdapterKey,
+    AuthEvents,
 } from "@/types";
 
 const defaultClientOptions: ClientOptions = {
@@ -45,6 +46,10 @@ export function createClient<T extends ClientOptions>(
     let clientOpts = { ...defaultClientOptions, ...options };
 
     let _init = state?.init ?? false;
+    let _expiration: NodeJS.Timeout | null = null;
+    let _listeners: {
+        [K in keyof AuthEvents]?: Set<(payload: AuthEvents[K]) => void>;
+    } = {};
     const _state: State = state
         ? { ...state.state }
         : {
@@ -90,8 +95,37 @@ export function createClient<T extends ClientOptions>(
         };
     }
 
+    function emit<K extends keyof AuthEvents>(
+        event: K,
+        payload: AuthEvents[K],
+    ) {
+        _listeners[event]?.forEach((cb) => cb(payload));
+    }
+
+    function clearLogoutTimer() {
+        if (_expiration) {
+            clearTimeout(_expiration);
+            _expiration = null;
+        }
+    }
+
+    function scheduleLogoutTimer(expiresIn: number) {
+        if (clientOpts.server || !isBrowser()) return;
+        clearLogoutTimer();
+        _expiration = setTimeout(async () => {
+            _expiration = null;
+            _state.session = null;
+
+            const storage = getStorage();
+            await storage.mutate({ token: null });
+
+            emit("logout", { reason: "expired" });
+        }, expiresIn * 1000);
+    }
+
     async function verifyToken(token: string, check?: boolean) {
         const shouldCheck = check ?? clientOpts.server;
+        const hadSession = !!_state.session;
 
         try {
             if (!shouldCheck) {
@@ -110,6 +144,18 @@ export function createClient<T extends ClientOptions>(
             }
         } catch (error) {
             _state.session = null;
+
+            clearLogoutTimer();
+
+            if (hadSession && _init) {
+                const reason =
+                    error instanceof AuthUnboundError &&
+                    error.code === "EXPIRED_TOKEN"
+                        ? "expired"
+                        : "revoked";
+                emit("logout", { reason });
+            }
+
             throw error;
         }
     }
@@ -129,6 +175,12 @@ export function createClient<T extends ClientOptions>(
                 await verifyToken(token);
             } catch {}
         }
+
+        if (_state.session?.expires_in) {
+            scheduleLogoutTimer(_state.session.expires_in);
+        }
+
+        emit("ready", { session: _state.session });
         _init = true;
     }
 
@@ -140,9 +192,36 @@ export function createClient<T extends ClientOptions>(
             { init: _init, state: _state },
         )) as UnboundClient<T>["clone"];
 
+    const on = <K extends keyof AuthEvents>(
+        event: K,
+        callback: (payload: AuthEvents[K]) => void,
+    ) => {
+        const listeners =
+            _listeners[event] ??
+            (_listeners[event] = new Set() as NonNullable<
+                (typeof _listeners)[K]
+            >);
+
+        listeners.add(callback);
+    };
+
+    const off = <K extends keyof AuthEvents>(
+        event: K,
+        callback: (payload: AuthEvents[K]) => void,
+    ) => {
+        _listeners[event]?.delete(
+            callback as (payload: AuthEvents[keyof AuthEvents]) => void,
+        );
+    };
+
     const client = {
         clone,
+        on,
+        off,
         initialize,
+        get user(): Session | null {
+            return _state.session;
+        },
         get config(): Readonly<T> {
             return clientOpts as T;
         },
@@ -269,7 +348,7 @@ export function createClient<T extends ClientOptions>(
                 }
 
                 try {
-                    const { access_token, expires_in } = await exchangeCode(
+                    const { access_token } = await exchangeCode(
                         {
                             code,
                             redirectUri,
@@ -291,13 +370,19 @@ export function createClient<T extends ClientOptions>(
                         token: access_token,
                     });
 
+                    const session = _state.session!;
+
+                    if (session.expires_in) {
+                        scheduleLogoutTimer(session.expires_in);
+                    }
+
+                    emit("auth", { session });
+
                     if (redirectTo && !clientOpts.server && isBrowser()) {
                         window.location.replace(redirectTo);
                     }
-                    return ok({
-                        access_token,
-                        expires_in,
-                    });
+
+                    return ok(session);
                 } catch (error) {
                     return wrappedFail(error as Error);
                 }
@@ -337,13 +422,34 @@ export function createClient<T extends ClientOptions>(
                     return fail(new AuthUnboundError("INVALID_TOKEN"));
                 }
 
+                if (_state.session.expires_in) {
+                    scheduleLogoutTimer(_state.session.expires_in);
+                }
+
                 return ok(_state.session);
             } catch (error) {
                 return fail(error as Error);
             }
         },
-        get user(): Session | null {
-            return _state.session;
+        logout: async () => {
+            try {
+                await initialize();
+
+                if (!_state.session) return ok(null);
+
+                const storage = getStorage();
+
+                _state.session = null;
+                clearLogoutTimer();
+                await storage.mutate({
+                    token: null,
+                });
+
+                emit("logout", { reason: "user" });
+                return ok(null);
+            } catch (error) {
+                return fail(error as Error);
+            }
         },
     };
 

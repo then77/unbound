@@ -326,6 +326,44 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
         opts?: ClientOptions & U & ValidateClientOptions<U>,
     ) => UnboundClient<MergeClientOptions<T, U>>;
     /**
+     * Subscribe to authentication lifecycle events.
+     *
+     * @param event - The event to listen for.
+     * @param callback - Handler invoked when the event fires.
+     * @returns An unsubscribe function that removes the listener.
+     *
+     * @example
+     * ```ts
+     * client.on('auth', ({ session }) => {
+     *   console.log('Signed in:', session.user?.name);
+     * });
+     * ```
+     */
+    on: <K extends keyof AuthEvents>(
+        event: K,
+        callback: (payload: AuthEvents[K]) => void,
+    ) => void;
+    /**
+     * Unsubscribe a previously registered event listener.
+     *
+     * @param event - The event to unsubscribe from.
+     * @param callback - The exact callback reference passed to {@link on}.
+     *
+     * @example
+     * ```ts
+     * const handler = ({ session }: AuthEvents['auth']) => {
+     *   console.log('Signed in:', session.user?.name);
+     * };
+     *
+     * client.on('auth', handler);
+     * client.off('auth', handler);
+     * ```
+     */
+    off: <K extends keyof AuthEvents>(
+        event: K,
+        callback: (payload: AuthEvents[K]) => void,
+    ) => void;
+    /**
      * Current client configuration.
      *
      * Returns a readonly copy of the configuration. Use the setter to update.
@@ -385,7 +423,7 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
      */
     finishSignIn: FunctionOptions<
         FinishSignInOptions<T>,
-        Promise<FunctionResult<FinishSignInResult>>
+        Promise<FunctionResult<Session>>
     >;
     /**
      * Retrieves the current session.
@@ -427,6 +465,15 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
         SetSessionOptions,
         Promise<FunctionResult<Session>>
     >;
+    /**
+     * Signs out the current user by clearing the session and stored token.
+     *
+     * @example
+     * ```ts
+     * await client.logout();
+     * ```
+     */
+    logout: FunctionOptions<null, Promise<FunctionResult<null>>>;
     /**
      * Current authenticated user session from cached state.
      *
@@ -477,6 +524,18 @@ export interface State {
     verifier: string | null;
     state: string | null;
 }
+
+export type AuthEvents = {
+    ready: {
+        session?: Session | null;
+    };
+    auth: {
+        session: Session;
+    };
+    logout: {
+        reason: "user" | "expired" | "revoked";
+    };
+};
 
 type JWKBase = {
     kid: string;
