@@ -86,6 +86,7 @@ function createAdapter(
                 value: "",
                 maxAge: 0,
                 path: cookieOpts?.path ?? "/",
+                domain: cookieOpts?.domain,
             };
         }
 
