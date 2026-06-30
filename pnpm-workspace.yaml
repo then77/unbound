@@ -11,5 +11,5 @@ onlyBuiltDependencies:
     - sharp
 
 catalog:
-    hono: 4.12.23
+    hono: 4.12.25
     "@changesets/cli": "^2.31.0"
