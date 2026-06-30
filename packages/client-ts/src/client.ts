@@ -309,7 +309,12 @@ export function createClient<T extends ClientOptions>(
                 );
 
                 const wrappedFail = (error: Parameters<typeof fail>[0]) => {
-                    if (clientOpts.auto_redirect && redirectTo && !clientOpts.server && isBrowser()) {
+                    if (
+                        clientOpts.auto_redirect &&
+                        redirectTo &&
+                        !clientOpts.server &&
+                        isBrowser()
+                    ) {
                         const url = new URL(redirectTo);
                         if (error instanceof UnboundError) {
                             url.searchParams.set(
@@ -383,8 +388,12 @@ export function createClient<T extends ClientOptions>(
                     });
 
                     const session = _state.session!;
-
                     if (session.expires_at) {
+                        session.expires_in = Math.max(
+                            0,
+                            session.expires_at - Math.floor(Date.now() / 1000),
+                        );
+
                         const remaining =
                             session.expires_at - Math.floor(Date.now() / 1000);
                         if (remaining > 0) {
@@ -398,18 +407,7 @@ export function createClient<T extends ClientOptions>(
                         window.location.replace(redirectTo);
                     }
 
-                    return ok(
-                        session.expires_at
-                            ? {
-                                  ...session,
-                                  expires_in: Math.max(
-                                      0,
-                                      session.expires_at -
-                                          Math.floor(Date.now() / 1000),
-                                  ),
-                              }
-                            : session,
-                    );
+                    return ok(session);
                 } catch (error) {
                     return wrappedFail(error as Error);
                 }
@@ -424,18 +422,15 @@ export function createClient<T extends ClientOptions>(
                 if (!_state.session) return ok(null);
                 await verifyToken(_state.session.access_token, opts?.verify);
 
-                return ok(
-                    _state.session.expires_at
-                        ? {
-                              ..._state.session,
-                              expires_in: Math.max(
-                                  0,
-                                  _state.session.expires_at -
-                                      Math.floor(Date.now() / 1000),
-                              ),
-                          }
-                        : _state.session,
-                );
+                const session = _state.session;
+                if (session.expires_at) {
+                    session.expires_in = Math.max(
+                        0,
+                        session.expires_at - Math.floor(Date.now() / 1000),
+                    );
+                }
+
+                return ok(session);
             } catch (error) {
                 return fail(error as Error);
             }
@@ -460,27 +455,21 @@ export function createClient<T extends ClientOptions>(
                     return fail(new AuthUnboundError("INVALID_TOKEN"));
                 }
 
-                if (_state.session.expires_at) {
+                const session = _state.session;
+                if (session.expires_at) {
+                    session.expires_in = Math.max(
+                        0,
+                        session.expires_at - Math.floor(Date.now() / 1000),
+                    );
+
                     const remaining =
-                        _state.session.expires_at -
-                        Math.floor(Date.now() / 1000);
+                        session.expires_at - Math.floor(Date.now() / 1000);
                     if (remaining > 0) {
                         scheduleLogoutTimer(remaining);
                     }
                 }
 
-                return ok(
-                    _state.session.expires_at
-                        ? {
-                              ..._state.session,
-                              expires_in: Math.max(
-                                  0,
-                                  _state.session.expires_at -
-                                      Math.floor(Date.now() / 1000),
-                              ),
-                          }
-                        : _state.session,
-                );
+                return ok(session);
             } catch (error) {
                 return fail(error as Error);
             }
