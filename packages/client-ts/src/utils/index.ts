@@ -15,6 +15,16 @@ export function fail(
     return { data: null, error } satisfies FunctionResult<never>;
 }
 
+/**
+ * Decodes a base64url-encoded string into a UTF-8 string.
+ */
+export function decodeBase64Url(str: string): string {
+    const padded = str.replace(/-/g, "+").replace(/_/g, "/");
+    return typeof atob === "function"
+        ? atob(padded)
+        : Buffer.from(padded, "base64").toString("utf-8");
+}
+
 // Determine if in browser environment
 export function isBrowser() {
     try {

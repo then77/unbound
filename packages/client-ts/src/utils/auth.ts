@@ -1,7 +1,7 @@
-import { decodeJwt } from "jose";
 import type { Session, FinishSignInResult, Scope } from "@/types";
 import { AuthUnboundError, type AuthUnboundErrorCode } from "@/exceptions/auth";
 import { APIUnboundError } from "@/exceptions/api";
+import { decodeBase64Url } from "@/utils";
 
 /**
  * Verify token and get user info.
@@ -103,7 +103,12 @@ export async function getUserInfo(
  */
 export function getSessionFromJWT(jwt: string): Session {
     try {
-        const payload = decodeJwt(jwt);
+        const parts = jwt.split(".");
+        if (parts.length !== 3) {
+            throw new Error("Invalid JWT format");
+        }
+
+        const payload = JSON.parse(decodeBase64Url(parts[1]));
         const session: Session = {
             access_token: jwt,
         };

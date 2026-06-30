@@ -1,4 +1,3 @@
-import { decodeJwt } from "jose";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
     parseCookie,
@@ -6,6 +5,7 @@ import {
     type CookieOptions,
     type CookieSerialize,
 } from "@/utils/cookie";
+import { decodeBase64Url } from "@/utils";
 import type {
     StorageAdapter,
     StorageAdapterBatch,
@@ -32,9 +32,11 @@ export interface CookieStorageProps {
 
 function getJWTExpiration(token: string): number | null {
     try {
-        const jwt = decodeJwt(token);
-        if (!jwt.exp) return null;
-        return Math.max(0, jwt.exp - Math.floor(Date.now() / 1000));
+        const parts = token.split(".");
+        if (parts.length !== 3) return null;
+        const payload = JSON.parse(decodeBase64Url(parts[1]));
+        if (!payload.exp) return null;
+        return Math.max(0, payload.exp - Math.floor(Date.now() / 1000));
     } catch {
         return null;
     }
