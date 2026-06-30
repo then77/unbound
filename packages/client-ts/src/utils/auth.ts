@@ -114,11 +114,10 @@ export function getSessionFromJWT(jwt: string): Session {
         };
 
         if (typeof payload.exp === "number" && Number.isFinite(payload.exp)) {
-            const expiresIn = payload.exp - Math.floor(Date.now() / 1000);
-            if (expiresIn <= 0) {
+            if (payload.exp <= Math.floor(Date.now() / 1000)) {
                 throw new AuthUnboundError("EXPIRED_TOKEN");
             }
-            session.expires_in = expiresIn;
+            session.expires_at = payload.exp;
         }
 
         if (typeof payload.sub === "string" && payload.sub.length > 0) {
