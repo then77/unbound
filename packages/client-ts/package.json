@@ -50,7 +50,5 @@
         "tsdown": "^0.22.3",
         "typescript": "^6.0.3"
     },
-    "dependencies": {
-        "jose": "^6.2.3"
-    }
+    "dependencies": {}
 }

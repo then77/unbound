@@ -1,7 +1,7 @@
-import { decodeJwt } from "jose";
 import type { Session, FinishSignInResult, Scope } from "@/types";
 import { AuthUnboundError, type AuthUnboundErrorCode } from "@/exceptions/auth";
 import { APIUnboundError } from "@/exceptions/api";
+import { decodeBase64Url } from "@/utils";
 
 /**
  * Verify token and get user info.
@@ -103,17 +103,21 @@ export async function getUserInfo(
  */
 export function getSessionFromJWT(jwt: string): Session {
     try {
-        const payload = decodeJwt(jwt);
+        const parts = jwt.split(".");
+        if (parts.length !== 3) {
+            throw new Error("Invalid JWT format");
+        }
+
+        const payload = JSON.parse(decodeBase64Url(parts[1]));
         const session: Session = {
             access_token: jwt,
         };
 
         if (typeof payload.exp === "number" && Number.isFinite(payload.exp)) {
-            const expiresIn = payload.exp - Math.floor(Date.now() / 1000);
-            if (expiresIn <= 0) {
+            if (payload.exp <= Math.floor(Date.now() / 1000)) {
                 throw new AuthUnboundError("EXPIRED_TOKEN");
             }
-            session.expires_in = expiresIn;
+            session.expires_at = payload.exp;
         }
 
         if (typeof payload.sub === "string" && payload.sub.length > 0) {

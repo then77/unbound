@@ -515,6 +515,8 @@ export interface Session {
     };
     /** Access token for authenticated requests. */
     access_token: string;
+    /** Unix timestamp (seconds) when the access token expires. */
+    expires_at?: number;
     /** Number of seconds until the access token expires. */
     expires_in?: number;
 }

@@ -176,8 +176,12 @@ export function createClient<T extends ClientOptions>(
             } catch {}
         }
 
-        if (_state.session?.expires_in) {
-            scheduleLogoutTimer(_state.session.expires_in);
+        if (_state.session?.expires_at) {
+            const remaining =
+                _state.session.expires_at - Math.floor(Date.now() / 1000);
+            if (remaining > 0) {
+                scheduleLogoutTimer(remaining);
+            }
         }
 
         emit("ready", { session: _state.session });
@@ -220,7 +224,15 @@ export function createClient<T extends ClientOptions>(
         off,
         initialize,
         get user(): Session | null {
-            return _state.session;
+            if (!_state.session) return null;
+            if (!_state.session.expires_at) return _state.session;
+            return {
+                ..._state.session,
+                expires_in: Math.max(
+                    0,
+                    _state.session.expires_at - Math.floor(Date.now() / 1000),
+                ),
+            };
         },
         get config(): Readonly<T> {
             return clientOpts as T;
@@ -297,7 +309,12 @@ export function createClient<T extends ClientOptions>(
                 );
 
                 const wrappedFail = (error: Parameters<typeof fail>[0]) => {
-                    if (redirectTo && !clientOpts.server && isBrowser()) {
+                    if (
+                        clientOpts.auto_redirect &&
+                        redirectTo &&
+                        !clientOpts.server &&
+                        isBrowser()
+                    ) {
                         const url = new URL(redirectTo);
                         if (error instanceof UnboundError) {
                             url.searchParams.set(
@@ -371,9 +388,17 @@ export function createClient<T extends ClientOptions>(
                     });
 
                     const session = _state.session!;
+                    if (session.expires_at) {
+                        session.expires_in = Math.max(
+                            0,
+                            session.expires_at - Math.floor(Date.now() / 1000),
+                        );
 
-                    if (session.expires_in) {
-                        scheduleLogoutTimer(session.expires_in);
+                        const remaining =
+                            session.expires_at - Math.floor(Date.now() / 1000);
+                        if (remaining > 0) {
+                            scheduleLogoutTimer(remaining);
+                        }
                     }
 
                     emit("auth", { session });
@@ -397,7 +422,15 @@ export function createClient<T extends ClientOptions>(
                 if (!_state.session) return ok(null);
                 await verifyToken(_state.session.access_token, opts?.verify);
 
-                return ok(_state.session);
+                const session = _state.session;
+                if (session.expires_at) {
+                    session.expires_in = Math.max(
+                        0,
+                        session.expires_at - Math.floor(Date.now() / 1000),
+                    );
+                }
+
+                return ok(session);
             } catch (error) {
                 return fail(error as Error);
             }
@@ -422,11 +455,21 @@ export function createClient<T extends ClientOptions>(
                     return fail(new AuthUnboundError("INVALID_TOKEN"));
                 }
 
-                if (_state.session.expires_in) {
-                    scheduleLogoutTimer(_state.session.expires_in);
+                const session = _state.session;
+                if (session.expires_at) {
+                    session.expires_in = Math.max(
+                        0,
+                        session.expires_at - Math.floor(Date.now() / 1000),
+                    );
+
+                    const remaining =
+                        session.expires_at - Math.floor(Date.now() / 1000);
+                    if (remaining > 0) {
+                        scheduleLogoutTimer(remaining);
+                    }
                 }
 
-                return ok(_state.session);
+                return ok(session);
             } catch (error) {
                 return fail(error as Error);
             }
