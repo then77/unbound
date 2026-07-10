@@ -7,8 +7,17 @@ export function TermsPage() {
                 <h1 class="text-4xl font-bold tracking-tight text-balance">
                     Terms Of Service
                 </h1>
-                <p class="text-muted-foreground">
-                    Effective date: <b>20 June, 2026</b>
+                <p class="text-muted-foreground [&_a]:text-foreground [&_a]:underline">
+                    Effective date: <b>14 July, 2026</b>
+                    <br />
+                    Previous version can be seen{" "}
+                    <a
+                        href="https://github.com/then77/unbound/commits/next/apps/web/src/pages/terms.tsx"
+                        target="_blank"
+                    >
+                        here
+                    </a>
+                    .
                 </p>
                 <div class="w-full h-px bg-muted mt-4" />
             </div>
@@ -22,10 +31,20 @@ export function TermsPage() {
 
             <LegalSection title="2. What Unbound is">
                 <p>
-                    Unbound is an authentication broker that keeps sign-in
-                    lightweight. It helps developers add auth without extra
-                    signup or complicated setup, while users sign in with the
-                    provider they choose.
+                    Unbound is a{" "}
+                    <span
+                        role="note"
+                        title="Stateless auth means user auth data are purely saved on each user local browser. Server do not store user data, only for processing."
+                        class="underline decoration-dashed cursor-help"
+                    >
+                        stateless
+                    </span>{" "}
+                    authentication broker. It lets developers add auth without
+                    extra signup or complicated setup, and lets users sign in
+                    with the provider they choose. User data is stored fully on
+                    the user's device, and only passes through the server for
+                    processing and auth to apps you authorize, never stored on
+                    server.
                 </p>
                 <p>
                     After the user approves an app, Unbound issues a short-lived
@@ -51,9 +70,16 @@ export function TermsPage() {
 
             <LegalSection title="3. What Unbound is not">
                 <ul>
-                    <li>Unbound is not a user database.</li>
-                    <li>Unbound is not an account recovery service.</li>
-                    <li>Unbound is not a moderation, or permission system.</li>
+                    <li>
+                        Unbound does not store user data on server. Without a
+                        valid token or exchange code, there is nothing to
+                        retrieve.
+                    </li>
+                    <li>
+                        Unbound does not handle account recovery. That stays
+                        with the external sign-in provider users choose.
+                    </li>
+                    <li>Unbound is not a moderation or permission system.</li>
                     <li>
                         Unbound does not decide whether a user should be allowed
                         inside your app. Your app still owns that decision.
@@ -91,7 +117,7 @@ export function TermsPage() {
                     </li>
                     <li>
                         You may not abuse, scrape, overload, interfere with, or
-                        attempt to bypass Unbound security controls.
+                        attempt to bypass Unbound's security measures.
                     </li>
                     <li>
                         You may not mislead users about your app, requested
@@ -179,7 +205,7 @@ export function TermsPage() {
             <LegalSection title="12. Contact">
                 <p>
                     Support/legal inquiries: refer to the contact info on the{" "}
-                    <a href="https://github.com/then77/unbound">
+                    <a href="https://github.com/then77/unbound" target="_blank">
                         Unbound GitHub repository
                     </a>
                     .

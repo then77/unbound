@@ -7,18 +7,29 @@ export function PrivacyPage() {
                 <h1 class="text-4xl font-bold tracking-tight text-balance">
                     Privacy Policy
                 </h1>
-                <p class="text-muted-foreground">
+                <p class="text-muted-foreground [&_a]:text-foreground [&_a]:underline">
                     Effective date: <b>20 June, 2026</b>
+                    <br />
+                    Previous version can be seen{" "}
+                    <a
+                        href="https://github.com/then77/unbound/commits/next/apps/web/src/pages/privacy.tsx"
+                        target="_blank"
+                    >
+                        here
+                    </a>
+                    .
                 </p>
                 <div class="w-full h-px bg-muted mt-4" />
             </div>
 
             <LegalSection title="1. Short version">
                 <p>
-                    Unbound is an authentication broker that keeps sign-in
-                    lightweight. It helps developers add auth without extra
-                    signup or complicated setup, while users sign in with the
-                    provider they choose.
+                    Unbound is a stateless authentication broker. It lets
+                    developers add auth without extra signup or complicated
+                    setup, and lets users sign in with the provider they choose.
+                    User data is stored fully on the user's device, and only
+                    passes through the server for processing and auth to apps
+                    you authorize, never stored on server.
                 </p>
                 <p>
                     Unbound only processes data provided for the auth flow, and
@@ -32,14 +43,19 @@ export function PrivacyPage() {
             <LegalSection title="2. Data Unbound may process">
                 <p>
                     During an auth flow, Unbound may process provided data
-                    required to complete that flow: <code>Provider ID</code>,{" "}
-                    <code>Provider name</code>, <code>Display name</code>,{" "}
-                    <code>Avatar (if available)</code>,{" "}
-                    <code>Email address</code>,{" "}
-                    <code>Email verification status</code>, <code>Scopes</code>,{" "}
-                    <code>Redirect URI</code>,{" "}
-                    <code>OAuth state, and token claims</code>.
+                    required to complete that flow:
                 </p>
+                <ul>
+                    <li>Provider ID</li>
+                    <li>Provider name</li>
+                    <li>Display name</li>
+                    <li>Avatar (if available)</li>
+                    <li>Email address</li>
+                    <li>Email verification status</li>
+                    <li>Scopes</li>
+                    <li>Redirect URI</li>
+                    <li>OAuth state and token claims</li>
+                </ul>
                 <p>
                     Some temporary technical data may also be used to keep the
                     auth flow working, prevent replay, debug issues, and handle
@@ -83,29 +99,45 @@ export function PrivacyPage() {
                 <ul>
                     <li>
                         Google:{" "}
-                        <a href="https://policies.google.com/terms">
+                        <a
+                            href="https://policies.google.com/terms"
+                            target="_blank"
+                        >
                             Terms of service
                         </a>
                         ,{" "}
-                        <a href="https://policies.google.com/privacy">
+                        <a
+                            href="https://policies.google.com/privacy"
+                            target="_blank"
+                        >
                             Privacy policy
                         </a>
                     </li>
                     <li>
                         GitHub:{" "}
-                        <a href="https://docs.github.com/en/site-policy/github-terms/github-terms-of-service">
+                        <a
+                            href="https://docs.github.com/en/site-policy/github-terms/github-terms-of-service"
+                            target="_blank"
+                        >
                             Terms of service
                         </a>
                         ,{" "}
-                        <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">
+                        <a
+                            href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
+                            target="_blank"
+                        >
                             Privacy policy
                         </a>
                     </li>
                     <li>
                         Discord:{" "}
-                        <a href="https://discord.com/terms">Terms of service</a>
+                        <a href="https://discord.com/terms" target="_blank">
+                            Terms of service
+                        </a>
                         ,{" "}
-                        <a href="https://discord.com/privacy">Privacy policy</a>
+                        <a href="https://discord.com/privacy" target="_blank">
+                            Privacy policy
+                        </a>
                     </li>
                 </ul>
             </LegalSection>
@@ -186,7 +218,7 @@ export function PrivacyPage() {
             <LegalSection title="12. Contact">
                 <p>
                     Support/legal inquiries: refer to the contact info on the{" "}
-                    <a href="https://github.com/then77/unbound">
+                    <a href="https://github.com/then77/unbound" target="_blank">
                         Unbound GitHub repository
                     </a>
                     .
