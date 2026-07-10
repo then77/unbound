@@ -1,6 +1,6 @@
 {
     "name": "unbound-auth",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "author": "Realzzy <hey@rlzy.me>",
     "description": "Javascript auth client for Unbound.",
     "homepage": "https://docs.unbound.rlzy.me",
