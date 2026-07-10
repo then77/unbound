@@ -488,6 +488,7 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
      * This is a synchronous getter that reflects the session state loaded by `initialize()`.
      *
      * Call `initialize()` first to ensure the session is loaded from storage.
+     * Use `ready` to check if initialization has completed.
      *
      * @example
      * ```ts
@@ -495,7 +496,9 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
      * console.log(client.user); // null
      *
      * await client.initialize();
-     * if (client.user) {
+     * if (!client.ready) {
+     *   console.log('Initializing');
+     * } else if (client.user) {
      *   console.log('Logged in as:', client.user.user?.name);
      * }
      * ```

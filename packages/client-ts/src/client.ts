@@ -482,6 +482,7 @@ export function createClient<T extends ClientOptions>(
                     }
                 }
 
+                emit("auth", { session });
                 return ok(session);
             } catch (error) {
                 return fail(error as Error);
