@@ -31,7 +31,7 @@ type UnboundBrowserClient = {
 } & {
     [K in ClientMethodKeys]: Client[K];
 } & {
-    ready: Readonly<boolean>;
+    ready: boolean;
     user: Session | null;
     config: Readonly<ClientBrowserOptions>;
 };

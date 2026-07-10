@@ -381,7 +381,7 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
      * Returns `true` after initialization completes, indicating the session
      * and auth state have been loaded.
      */
-    ready: Readonly<boolean>;
+    ready: boolean;
     /**
      * Initializes the client by loading stored session and auth state.
      *
@@ -492,14 +492,17 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
      *
      * @example
      * ```ts
-     * // May be null before initialization
+     * // Before init: not ready, user is null
+     * console.log(client.ready); // false
      * console.log(client.user); // null
      *
      * await client.initialize();
-     * if (!client.ready) {
-     *   console.log('Initializing');
-     * } else if (client.user) {
+     *
+     * // After init: ready is true; user is the session or null
+     * if (client.user) {
      *   console.log('Logged in as:', client.user.user?.name);
+     * } else {
+     *   console.log('Signed out');
      * }
      * ```
      */
