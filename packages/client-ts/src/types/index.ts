@@ -376,6 +376,13 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
      */
     config: Readonly<T>;
     /**
+     * Whether the client has been initialized.
+     *
+     * Returns `true` after initialization completes, indicating the session
+     * and auth state have been loaded.
+     */
+    ready: Readonly<boolean>;
+    /**
      * Initializes the client by loading stored session and auth state.
      *
      * This is called automatically when calling other methods, but can be invoked manually
