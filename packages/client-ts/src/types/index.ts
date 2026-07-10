@@ -376,6 +376,13 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
      */
     config: Readonly<T>;
     /**
+     * Whether the client has been initialized.
+     *
+     * Returns `true` after initialization completes, indicating the session
+     * and auth state have been loaded.
+     */
+    ready: boolean;
+    /**
      * Initializes the client by loading stored session and auth state.
      *
      * This is called automatically when calling other methods, but can be invoked manually
@@ -481,15 +488,21 @@ export interface UnboundClient<T extends ClientOptions = ClientOptions> {
      * This is a synchronous getter that reflects the session state loaded by `initialize()`.
      *
      * Call `initialize()` first to ensure the session is loaded from storage.
+     * Use `ready` to check if initialization has completed.
      *
      * @example
      * ```ts
-     * // May be null before initialization
+     * // Before init: not ready, user is null
+     * console.log(client.ready); // false
      * console.log(client.user); // null
      *
      * await client.initialize();
+     *
+     * // After init: ready is true; user is the session or null
      * if (client.user) {
      *   console.log('Logged in as:', client.user.user?.name);
+     * } else {
+     *   console.log('Signed out');
      * }
      * ```
      */

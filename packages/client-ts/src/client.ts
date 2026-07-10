@@ -46,6 +46,7 @@ export function createClient<T extends ClientOptions>(
     let clientOpts = { ...defaultClientOptions, ...options };
 
     let _init = state?.init ?? false;
+    let _initPromise: Promise<void> | null = null;
     let _expiration: NodeJS.Timeout | null = null;
     let _listeners: {
         [K in keyof AuthEvents]?: Set<(payload: AuthEvents[K]) => void>;
@@ -162,30 +163,39 @@ export function createClient<T extends ClientOptions>(
 
     async function initialize() {
         if (_init) return;
+        if (_initPromise) return _initPromise;
 
-        const storage = getStorage();
-        const data = await storage.query(["verifier", "state", "token"]);
+        _initPromise = (async () => {
+            const storage = getStorage();
+            const data = await storage.query(["verifier", "state", "token"]);
 
-        _state.verifier ??= data.verifier ?? null;
-        _state.state ??= data.state ?? null;
+            _state.verifier ??= data.verifier ?? null;
+            _state.state ??= data.state ?? null;
 
-        const token = _state.session?.access_token ?? data.token ?? null;
-        if (token && !_state.session) {
-            try {
-                await verifyToken(token);
-            } catch {}
-        }
-
-        if (_state.session?.expires_at) {
-            const remaining =
-                _state.session.expires_at - Math.floor(Date.now() / 1000);
-            if (remaining > 0) {
-                scheduleLogoutTimer(remaining);
+            const token = _state.session?.access_token ?? data.token ?? null;
+            if (token && !_state.session) {
+                try {
+                    await verifyToken(token);
+                } catch {}
             }
-        }
 
-        emit("ready", { session: _state.session });
-        _init = true;
+            if (_state.session?.expires_at) {
+                const remaining =
+                    _state.session.expires_at - Math.floor(Date.now() / 1000);
+                if (remaining > 0) {
+                    scheduleLogoutTimer(remaining);
+                }
+            }
+
+            _init = true;
+            emit("ready", { session: _state.session });
+        })();
+
+        try {
+            await _initPromise;
+        } finally {
+            _initPromise = null;
+        }
     }
 
     const clone = (<U extends ClientOptions = {}>(
@@ -223,6 +233,9 @@ export function createClient<T extends ClientOptions>(
         on,
         off,
         initialize,
+        get ready(): boolean {
+            return _init;
+        },
         get user(): Session | null {
             if (!_state.session) return null;
             if (!_state.session.expires_at) return _state.session;
@@ -469,6 +482,7 @@ export function createClient<T extends ClientOptions>(
                     }
                 }
 
+                emit("auth", { session });
                 return ok(session);
             } catch (error) {
                 return fail(error as Error);

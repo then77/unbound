@@ -31,6 +31,7 @@ type UnboundBrowserClient = {
 } & {
     [K in ClientMethodKeys]: Client[K];
 } & {
+    ready: boolean;
     user: Session | null;
     config: Readonly<ClientBrowserOptions>;
 };
@@ -51,6 +52,9 @@ const Unbound: UnboundBrowserClient = {
     getSession: defaultClient.getSession.bind(defaultClient),
     setSession: defaultClient.setSession.bind(defaultClient),
     logout: defaultClient.logout.bind(defaultClient),
+    get ready() {
+        return defaultClient.ready;
+    },
     get user() {
         return defaultClient.user;
     },
