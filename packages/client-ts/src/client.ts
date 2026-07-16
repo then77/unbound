@@ -459,7 +459,7 @@ export function createClient<T extends ClientOptions>(
 
                 const storage = getStorage();
 
-                await verifyToken(token, opts.verify ?? false);
+                await verifyToken(token, opts.verify);
                 await storage.mutate({
                     token,
                 });
