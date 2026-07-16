@@ -101,11 +101,27 @@ const authorizeFormSchema = z.object({
 
 const tokenFormSchema = z.object({
     grant_type: z.literal("authorization_code"),
-    client_id: z.string().min(1),
+    client_id: z.string().min(1).optional(),
     redirect_uri: z.url(),
     code: z.string().min(1),
     code_verifier: z.string().min(1).optional(),
 });
+
+function getBasicAuthClientId(authorization: string | undefined) {
+    const match = authorization?.match(/^Basic\s+(.+)$/i);
+    if (!match) return null;
+
+    try {
+        const decoded = atob(match[1].trim());
+        const separator = decoded.lastIndexOf(":"); // get last colon for split
+        if (separator <= 0) return null;
+
+        const clientId = decoded.slice(0, separator);
+        return clientId || null;
+    } catch {
+        return null;
+    }
+}
 
 const app = new Hono<AppEnv>();
 
@@ -197,8 +213,23 @@ app.post(
         return c.json(tokenValidationError(result.error.issues, "form"), 400);
     }),
     async (c) => {
-        const { client_id, redirect_uri, code, code_verifier } =
-            c.req.valid("form");
+        const form = c.req.valid("form");
+        const { redirect_uri, code, code_verifier } = form;
+
+        const client_id =
+            getBasicAuthClientId(c.req.header("Authorization")) ??
+            form.client_id;
+
+        if (!client_id) {
+            return c.json(
+                {
+                    error: "invalid_request",
+                    code: "MISSING_CLIENT_ID",
+                    error_description: "Missing required parameter: client_id",
+                },
+                400,
+            );
+        }
 
         let result: Awaited<ReturnType<typeof decodeAuthCode>>;
         try {
@@ -208,6 +239,7 @@ app.post(
                 return c.json(
                     {
                         error: "invalid_grant",
+                        code: "INVALID_CODE",
                         error_description: "Invalid authorization code",
                     },
                     400,
@@ -221,6 +253,7 @@ app.post(
             return c.json(
                 {
                     error: "invalid_grant",
+                    code: "EXPIRED_CODE",
                     error_description: "Authorization code expired",
                 },
                 400,
@@ -235,6 +268,7 @@ app.post(
             return c.json(
                 {
                     error: "invalid_grant",
+                    code: "INVALID_CLIENT_ID",
                     error_description: message,
                 },
                 400,
@@ -245,6 +279,7 @@ app.post(
             return c.json(
                 {
                     error: "invalid_grant",
+                    code: "INVALID_REDIRECT_URI",
                     error_description: "Redirect uri does not match",
                 },
                 400,
@@ -256,6 +291,7 @@ app.post(
                 return c.json(
                     {
                         error: "invalid_grant",
+                        code: "MISSING_VERIFIER",
                         error_description:
                             "Code verifier is required for this code",
                     },
@@ -270,6 +306,7 @@ app.post(
                 return c.json(
                     {
                         error: "invalid_grant",
+                        code: "INVALID_VERIFIER",
                         error_description:
                             "Code verifier does not match code challenge",
                     },
@@ -286,6 +323,7 @@ app.post(
                 return c.json(
                     {
                         error: "invalid_grant",
+                        code: "USED_CODE",
                         error_description: "Authorization code already used",
                     },
                     400,

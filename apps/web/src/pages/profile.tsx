@@ -186,7 +186,7 @@ export function ProfilePage({ session }: ProfilePageProps) {
 
             <script
                 dangerouslySetInnerHTML={{
-                    __html: `document.addEventListener("click",e=>e.target.closest("[data-alert-dialog-close]")?.closest('[data-slot="alert-dialog"]')?.setAttribute("data-state","closed"))`,
+                    __html: `document.currentScript?.remove();document.addEventListener("click",e=>e.target.closest("[data-alert-dialog-close]")?.closest('[data-slot="alert-dialog"]')?.setAttribute("data-state","closed"))`,
                 }}
             />
         </>

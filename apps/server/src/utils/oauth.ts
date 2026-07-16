@@ -205,6 +205,7 @@ export async function finishGithubOauth(
                     access_token: string;
                 }>("https://github.com/login/oauth/access_token", {
                     headers: {
+                        "User-Agent": "Unbound-Auth-App",
                         Accept: "application/json",
                     },
                     body: new URLSearchParams({
@@ -231,6 +232,7 @@ export async function finishGithubOauth(
                         avatar_url?: string;
                     }>("https://api.github.com/user", {
                         headers: {
+                            "User-Agent": "Unbound-Auth-App",
                             Authorization: `Bearer ${access_token}`,
                         },
                     })
@@ -244,6 +246,7 @@ export async function finishGithubOauth(
                         }>
                     >("https://api.github.com/user/emails", {
                         headers: {
+                            "User-Agent": "Unbound-Auth-App",
                             Authorization: `Bearer ${access_token}`,
                         },
                     })

@@ -1,0 +1,208 @@
+name: Release Client
+
+on:
+    push:
+        branches:
+            - "release/client/*"
+    workflow_dispatch:
+        inputs:
+            force_publish:
+                description: "Force publish npm"
+                type: boolean
+                default: false
+            force_release:
+                description: "Force create GitHub release"
+                type: boolean
+                default: false
+
+jobs:
+    check:
+        name: Check release
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        outputs:
+            skip: ${{ steps.check.outputs.skip }}
+            version: ${{ steps.check.outputs.version }}
+            tag: ${{ steps.check.outputs.tag }}
+            force_publish: ${{ steps.check.outputs.force_publish }}
+            force_release: ${{ steps.check.outputs.force_release }}
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: false
+
+            - uses: ./.github/actions/ci-setup
+
+            - name: Check
+              id: check
+              shell: bash
+              run: |
+                  BRANCH="${GITHUB_REF#refs/heads/}"
+                  VERSION=$(node -p "require('./packages/client-ts/package.json').version")
+
+                  echo "Current branch: $BRANCH"
+                  echo "Current version: $VERSION"
+
+                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+                  get_tag() {
+                      local default_tag=$1
+                      if [[ -f ".changeset/pre.json" ]]; then
+                          PRE_MODE=$(node -p "require('./.changeset/pre.json').mode")
+                          PRE_TAG=$(node -p "require('./.changeset/pre.json').tag")
+                          if [[ "$PRE_MODE" == "pre" ]]; then
+                              echo "Active pre mode, using tag from pre.json: $PRE_TAG" >&2
+                              echo "$PRE_TAG"
+                              return
+                          fi
+                      fi
+                      echo "No active pre mode, using default tag: $default_tag" >&2
+                      echo "$default_tag"
+                  }
+
+                  if [[ "$BRANCH" =~ ^release/client/ ]]; then
+                      echo "Release branch detected"
+                      TAG=$(get_tag "latest")
+                      echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+                  elif [[ "$BRANCH" == "next" ]]; then
+                      echo "Next branch detected"
+                      TAG=$(get_tag "next")
+                      echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+                  else
+                      echo "SKIP: Unsupported branch"
+                      echo "skip=true" >> "$GITHUB_OUTPUT"
+                      exit 0
+                  fi
+
+                  FORCE_PUBLISH="${{ github.event.inputs.force_publish }}"
+                  FORCE_RELEASE="${{ github.event.inputs.force_release }}"
+                  FORCE_PUBLISH="${FORCE_PUBLISH:-false}"
+                  FORCE_RELEASE="${FORCE_RELEASE:-false}"
+
+                  echo "force_publish=$FORCE_PUBLISH" >> "$GITHUB_OUTPUT"
+                  echo "force_release=$FORCE_RELEASE" >> "$GITHUB_OUTPUT"
+
+                  if [[ "$FORCE_PUBLISH" == "true" || "$FORCE_RELEASE" == "true" ]]; then
+                      echo "Force publish/release, skipping changeset check"
+                      echo "skip=false" >> "$GITHUB_OUTPUT"
+                      exit 0
+                  fi
+
+                  # only continue if unbound-auth has changeset
+                  if ! grep -R '"unbound-auth"' .changeset >/dev/null 2>&1; then
+                      echo "SKIP: No changeset found for unbound-auth"
+                      echo "skip=true" >> "$GITHUB_OUTPUT"
+                      exit 0
+                  fi
+
+                  echo "Changeset found for unbound-auth"
+                  echo "skip=false" >> "$GITHUB_OUTPUT"
+
+    version:
+        name: Update version
+        needs: check
+        if: needs.check.outputs.skip != 'true'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+
+        outputs:
+            version: ${{ steps.version.outputs.version }}
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: true
+
+            - uses: ./.github/actions/ci-setup
+
+            - name: Version
+              id: version
+              run: |
+                  pnpm changeset version
+                  VERSION=$(node -p "require('./packages/client-ts/package.json').version")
+                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+            - name: Commit version
+              run: |
+                  git config user.name github-actions
+                  git config user.email github-actions@github.com
+
+                  git add .
+                  git commit \
+                    -m "chore(client): release ${{ steps.version.outputs.version }}" || true
+
+                  git push
+
+    publish:
+        name: Publish npm
+        needs:
+            - check
+            - version
+
+        # Publish on normal releases, or when force_publish is set.
+        # force_release alone must not publish to npm.
+        if: >-
+            !failure() &&
+            needs.check.outputs.skip != 'true' &&
+            (needs.check.outputs.force_publish == 'true' ||
+             needs.check.outputs.force_release != 'true')
+
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write
+            contents: read
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  ref: ${{ github.ref }}
+                  persist-credentials: false
+
+            - uses: ./.github/actions/ci-setup
+
+            - name: Build
+              run: pnpm --filter unbound-auth build
+
+            - name: Publish
+              run: >-
+                  pnpm --filter unbound-auth publish
+                  --no-git-checks
+                  --provenance
+                  --tag ${{ needs.check.outputs.tag || 'latest' }}
+
+    release:
+        name: GitHub Release
+        needs:
+            - check
+            - version
+
+        # Release on normal releases, or when force_release is set.
+        # force_publish alone must not create a GitHub release.
+        if: >-
+            !failure() &&
+            needs.check.outputs.skip != 'true' &&
+            (needs.check.outputs.force_release == 'true' ||
+             needs.check.outputs.force_publish != 'true')
+
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  ref: ${{ github.ref }}
+                  persist-credentials: false
+
+            - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b #v3.0.1
+              with:
+                  tag_name: v${{ needs.version.outputs.version || needs.check.outputs.version }}
+                  generate_release_notes: true
+                  prerelease: ${{ needs.check.outputs.tag != 'latest' }}

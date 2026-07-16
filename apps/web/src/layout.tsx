@@ -11,6 +11,8 @@ export type LayoutProps = PropsWithChildren<{
     session?: Partial<Session> | null;
     empty?: boolean;
     navbarState?: null | "show" | "hide";
+    gitCommit?: string | null;
+    nextVersion?: boolean | null;
 }>;
 
 export function Layout({
@@ -19,6 +21,8 @@ export function Layout({
     session,
     empty,
     navbarState,
+    gitCommit,
+    nextVersion,
     children,
 }: LayoutProps) {
     return (
@@ -44,20 +48,68 @@ export function Layout({
                 <link rel="stylesheet" href="/style.css" />
             </head>
             <body class="flex flex-col items-center min-h-svh px-8">
+                {nextVersion && (
+                    <>
+                        <style>{`@keyframes next-notice{from{transform:translateX(0)}to{transform:translateX(-50%)}}.next-notice{animation:36s linear infinite next-notice}`}</style>
+                        <div class="fixed top-0 left-0 z-9999 w-full overflow-hidden bg-warning-background/50 p-2 text-sm text-warning-foreground pointer-events-none whitespace-nowrap">
+                            <div class="next-notice flex w-max">
+                                {Array.from({ length: 6 }, (_, index) => (
+                                    <span
+                                        aria-hidden={
+                                            index === 0 ? undefined : "true"
+                                        }
+                                    >
+                                        Heads up! This is the{" "}
+                                        <b>Unbound Next</b> (WIP) version and
+                                        may contain unfinished/buggy features.
+                                        Do not use this for production!
+                                        <span class="mx-4" aria-hidden="true">
+                                            ㆍ
+                                        </span>
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                        <div class="h-7 sm:h-6" />
+                    </>
+                )}
                 {session?.flash && <Flash flash={session.flash} />}
                 {empty ? (
                     children
                 ) : (
                     <div class="w-full flex-1 max-w-6xl flex flex-col">
-                        <Navbar appName={appName} session={session} navbarState={navbarState} />
+                        <Navbar
+                            appName={appName}
+                            session={session}
+                            navbarState={navbarState}
+                        />
                         <main class="flex flex-col w-full flex-1">
                             {children}
                         </main>
-                        <footer class="w-full py-6 border-t border-muted text-sm text-muted-foreground">
-                            <p>
+                        <footer class="w-full flex flex-col md:flex-row gap-4 py-6 border-t border-muted text-sm text-muted-foreground [&_a]:hover:text-foreground">
+                            <p class="md:flex-1">
                                 &copy; {new Date().getFullYear()} Project
                                 Unbound.
+                                {gitCommit && (
+                                    <>
+                                        {" "}
+                                        Build version{" "}
+                                        <a
+                                            class="underline"
+                                            href={`https://github.com/then77/unbound/commit/${gitCommit}`}
+                                        >
+                                            {gitCommit.slice(0, 7)}
+                                        </a>
+                                    </>
+                                )}
                             </p>
+                            <div class="flex flex-row gap-4">
+                                <a href="/terms">Terms</a>
+                                <a href="/privacy">Privacy</a>
+                                <a href="https://github.com/then77/unbound">
+                                    Github
+                                </a>
+                            </div>
                         </footer>
                     </div>
                 )}
