@@ -16,8 +16,8 @@ export type APIUnboundErrorCode = "NETWORK_ERROR" | "SERVER_ERROR" | "UNKNOWN";
 export class APIUnboundError extends UnboundError {
     /**
      * API request error code.
-     * 
-     * See {@link ApiUnboundErrorCode} for all available codes
+     *
+     See {@link APIUnboundErrorCode} for all available codes
      */
     public override readonly code: APIUnboundErrorCode;
 

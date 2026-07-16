@@ -113,10 +113,11 @@ function getBasicAuthClientId(authorization: string | undefined) {
 
     try {
         const decoded = atob(match[1].trim());
-        const parts = decoded.split(":");
-        if (parts.length < 4) return null;
+        const separator = decoded.lastIndexOf(":"); // get last colon for split
+        if (separator <= 0) return null;
 
-        return parts.slice(0, 3).join(":");
+        const clientId = decoded.slice(0, separator);
+        return clientId || null;
     } catch {
         return null;
     }

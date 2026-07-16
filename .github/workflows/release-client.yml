@@ -77,23 +77,25 @@ jobs:
                       exit 0
                   fi
 
-
                   FORCE_PUBLISH="${{ github.event.inputs.force_publish }}"
                   FORCE_RELEASE="${{ github.event.inputs.force_release }}"
+                  FORCE_PUBLISH="${FORCE_PUBLISH:-false}"
+                  FORCE_RELEASE="${FORCE_RELEASE:-false}"
+
+                  echo "force_publish=$FORCE_PUBLISH" >> "$GITHUB_OUTPUT"
+                  echo "force_release=$FORCE_RELEASE" >> "$GITHUB_OUTPUT"
 
                   if [[ "$FORCE_PUBLISH" == "true" || "$FORCE_RELEASE" == "true" ]]; then
-                      echo "Force flags detected, skipping changeset check"
+                      echo "Force publish/release, skipping changeset check"
                       echo "skip=false" >> "$GITHUB_OUTPUT"
-                      echo "force_publish=$FORCE_PUBLISH" >> "$GITHUB_OUTPUT"
-                      echo "force_release=$FORCE_RELEASE" >> "$GITHUB_OUTPUT"
                       exit 0
                   fi
 
                   # only continue if unbound-auth has changeset
                   if ! grep -R '"unbound-auth"' .changeset >/dev/null 2>&1; then
-                    echo "SKIP: No changeset found for unbound-auth"
-                    echo "skip=true" >> "$GITHUB_OUTPUT"
-                    exit 0
+                      echo "SKIP: No changeset found for unbound-auth"
+                      echo "skip=true" >> "$GITHUB_OUTPUT"
+                      exit 0
                   fi
 
                   echo "Changeset found for unbound-auth"
@@ -142,7 +144,13 @@ jobs:
             - check
             - version
 
-        if: "!failure() && (needs.check.outputs.skip != 'true' || needs.check.outputs.force_publish == 'true')"
+        # Publish on normal releases, or when force_publish is set.
+        # force_release alone must not publish to npm.
+        if: >-
+            !failure() &&
+            needs.check.outputs.skip != 'true' &&
+            (needs.check.outputs.force_publish == 'true' ||
+             needs.check.outputs.force_release != 'true')
 
         runs-on: ubuntu-latest
         permissions:
@@ -162,7 +170,11 @@ jobs:
               run: pnpm --filter unbound-auth build
 
             - name: Publish
-              run: pnpm --filter unbound-auth publish --no-git-checks --provenance
+              run: >-
+                  pnpm --filter unbound-auth publish
+                  --no-git-checks
+                  --provenance
+                  --tag ${{ needs.check.outputs.tag || 'latest' }}
 
     release:
         name: GitHub Release
@@ -170,7 +182,13 @@ jobs:
             - check
             - version
 
-        if: "!failure() && (needs.check.outputs.skip != 'true' || needs.check.outputs.force_release == 'true')"
+        # Release on normal releases, or when force_release is set.
+        # force_publish alone must not create a GitHub release.
+        if: >-
+            !failure() &&
+            needs.check.outputs.skip != 'true' &&
+            (needs.check.outputs.force_release == 'true' ||
+             needs.check.outputs.force_publish != 'true')
 
         runs-on: ubuntu-latest
         permissions:

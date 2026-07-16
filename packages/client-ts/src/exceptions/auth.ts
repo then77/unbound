@@ -9,10 +9,12 @@ export type AuthUnboundErrorCode =
     | "MISSING_CODE"
     | "MISSING_STATE"
     | "MISSING_VERIFIER"
+    | "MISSING_CLIENT_ID"
     | "INVALID_REDIRECT_URI"
     | "INVALID_CODE"
     | "INVALID_STATE"
     | "INVALID_VERIFIER"
+    | "INVALID_CLIENT_ID"
     | "EXPIRED_CODE"
     | "USED_CODE"
     | "MISSING_TOKEN"
@@ -20,6 +22,8 @@ export type AuthUnboundErrorCode =
     | "EXPIRED_TOKEN";
 
 export const authUnboundErrorMessages: Record<AuthUnboundErrorCode, string> = {
+    MISSING_CLIENT_ID:
+        "Missing client id. This is likely caused from outdated client.",
     MISSING_REDIRECT_URI:
         "Missing redirect URI. Set it in client config or pass it when calling the function.",
     MISSING_SCOPES:
@@ -27,6 +31,8 @@ export const authUnboundErrorMessages: Record<AuthUnboundErrorCode, string> = {
     MISSING_CODE: "Missing authorization code.",
     MISSING_STATE: "Missing login state.",
     MISSING_VERIFIER: "Missing PKCE code verifier.",
+    INVALID_CLIENT_ID:
+        "Invalid client id. This is likely caused from outdated client.",
     INVALID_REDIRECT_URI: "Invalid redirect URI.",
     INVALID_CODE: "Invalid authorization code.",
     INVALID_STATE: "Invalid login state.",

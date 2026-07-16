@@ -295,7 +295,7 @@ declare global {
         }
     }
 }
-declare module "http" {
+declare module "node:http" {
     interface IncomingMessage {
         auth?: UnboundClient;
     }

@@ -28,9 +28,10 @@ export const rendererMiddleware = jsxRenderer(
         // Specific env from ci/cd. If you self deploy yourself, you can
         // safely not use / delete this
         const gitCommit = (c.env as any).GIT_COMMIT ?? null;
-        const nextVersion = (c.env as any).NEXT_VERSION
-            ? Boolean((c.env as any).NEXT_VERSION)
-            : false;
+        const nextVersionEnv = String((c.env as any).NEXT_VERSION ?? "")
+            .trim()
+            .toLowerCase();
+        const nextVersion = ["1", "true", "yes", "on"].includes(nextVersionEnv);
 
         return (
             <Layout

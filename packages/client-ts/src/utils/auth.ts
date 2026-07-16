@@ -228,17 +228,25 @@ export async function exchangeCode(
                         if (json?.code && typeof json.code === "string") {
                             // Check if it's a valid auth error code
                             const authErrorCodes = [
+                                "MISSING_VERIFIER",
+                                "MISSING_CLIENT_ID",
                                 "INVALID_REDIRECT_URI",
                                 "INVALID_CODE",
                                 "INVALID_STATE",
                                 "INVALID_VERIFIER",
+                                "INVALID_CLIENT_ID",
                                 "EXPIRED_CODE",
                                 "USED_CODE",
                             ] satisfies AuthUnboundErrorCode[];
                             if (authErrorCodes.includes(json.code)) {
+                                // Override message specific for client id error
+                                const isClientIdError =
+                                    json.code === "MISSING_CLIENT_ID" ||
+                                    json.code === "INVALID_CLIENT_ID";
+
                                 throw new AuthUnboundError(
                                     json.code,
-                                    json.message,
+                                    isClientIdError ? undefined : json.message,
                                 );
                             }
                         }
