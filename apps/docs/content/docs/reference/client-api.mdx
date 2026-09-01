@@ -1,0 +1,252 @@
+---
+title: TypeScript client API
+description: Exports, options, methods, events, session shape, and adapters for the unbound-auth package.
+---
+
+The `unbound-auth` package provides a result-based TypeScript client for browser and server integrations. This page describes the current `0.2.x` API behavior.
+
+<Callout title="Alpha status" type="warning">
+  The client API may change during alpha. Handle documented results and errors explicitly, and verify behavior when upgrading.
+</Callout>
+
+## Package exports
+
+### `unbound-auth`
+
+Value exports:
+
+```ts
+createUnboundClient
+UnboundError
+APIUnboundError
+AuthUnboundError
+```
+
+Type exports:
+
+```ts
+Scope
+Session
+ClientOptions
+UnboundClient
+StorageAdapter
+StorageAdapterKey
+StartSignInOptions
+StartSignInResult
+FinishSignInOptions
+FinishSignInResult
+GetSessionOptions
+SetSessionOptions
+PublicJWK
+```
+
+`FunctionResult`, event-map types, and individual error-code union types are not exported from the package root.
+
+### `unbound-auth/adapters`
+
+```ts
+import {
+  browserStorageAdapter,
+  cookieStorageAdapter,
+} from "unbound-auth/adapters";
+```
+
+Only the adapter functions should be treated as named exports from this subpath. Do not rely on named imports of their internal option interfaces.
+
+## Result model
+
+Normal authentication operations return a discriminated result:
+
+```ts
+type Result<T> =
+  | { data: T; error: null }
+  | {
+      data: null;
+      error: AuthUnboundError | APIUnboundError | UnboundError | Error;
+    };
+```
+
+The `Result` type itself is not exported. Expected authentication and API failures are returned rather than thrown.
+
+```ts
+const { data, error } = await auth.getSession({ verify: true });
+
+if (error) {
+  // Branch by error class and code without logging credentials.
+} else {
+  // data is Session | null
+}
+```
+
+`initialize()` is different: it returns `Promise<void>` and can reject. Adapter construction misuse can also throw synchronously, and event listeners can throw during an operation.
+
+## Client options
+
+```ts
+interface ClientOptions {
+  auth_url?: string;
+  redirect_uri?: string;
+  redirect_to?: string;
+  scopes?: Array<"openid" | "profile" | "email">;
+  server?: boolean;
+  auto_redirect?: boolean;
+  storage?: StorageAdapter;
+  fetcher?: typeof fetch;
+  advanced?: {
+    endpoints?: {
+      authorization?: string;
+      token?: string;
+      userinfo?: string;
+    };
+  };
+}
+```
+
+| Option | Default | Notes |
+| --- | --- | --- |
+| `auth_url` | `https://unbound.rlzy.me` | Authorization-server base URL |
+| `redirect_uri` | Browser: `<origin>/callback`; server: none | Relative values resolve only in a detected browser; server use requires an absolute HTTP(S) URL |
+| `redirect_to` | None | Post-finish destination; relative values resolve only in a browser |
+| `scopes` | `['profile', 'email']` | Unsupported values passed at runtime are silently removed by `startSignIn()` |
+| `server` | Falsey | Enables server defaults and disables browser navigation/timers |
+| `auto_redirect` | Falsey | Enables start navigation and construction-time callback handling when `redirect_to` is also set |
+| `storage` | `browserStorageAdapter()` | Token in `localStorage`; state and verifier in `sessionStorage` |
+| `fetcher` | Global `fetch` | Custom fetch-compatible implementation |
+| `advanced.endpoints.authorization` | `/authorize` | Relative to `auth_url`; absolute overrides are accepted |
+| `advanced.endpoints.token` | `/token` | Relative to `auth_url`; absolute overrides are accepted |
+| `advanced.endpoints.userinfo` | `/userinfo` | Relative to `auth_url`; absolute overrides are accepted |
+
+Configuration, clone, and initial-option merges are shallow. Supplying `advanced` replaces the previous `advanced` object, although each endpoint helper falls back to its standard path when its specific override is absent.
+
+The npm client does not redirect automatically by default. CDN behavior is intentionally not documented here because the emitted global shape has not been verified.
+
+## Browser and server behavior
+
+| Behavior | Browser client | `server: true` client |
+| --- | --- | --- |
+| Default callback | `<window.location.origin>/callback` | None; absolute callback required |
+| Construction initialization | Starts automatically | Lazy |
+| State validation in `finishSignIn()` | Yes when code is read from the callback URL | No; app must validate state |
+| Default token processing | Decode only | Calls `/userinfo` |
+| Expiration timer | Yes, when numeric `exp` exists | No |
+| Navigation | Available when configured | Disabled |
+
+A runtime is considered a browser only when `window.location` and `window.localStorage` are accessible. Restricted storage access can cause browser-like code to be treated as non-browser.
+
+## Create a client
+
+```ts
+const auth = createUnboundClient({
+  redirect_uri: "/auth/callback",
+  scopes: ["openid", "profile", "email"],
+});
+```
+
+`createUnboundClient()` accepts no options, browser options, or server options. Conditional types require a per-call `redirect_uri` for server clients created without one and reject `server: true` with `auto_redirect: true` at the type level. Runtime does not reject that combination, but server mode still prevents browser navigation.
+
+## Methods
+
+| Method | Success data | Important behavior |
+| --- | --- | --- |
+| `initialize(): Promise<void>` | None | Loads stored state, verifier, and token; sets `ready`; can reject |
+| `startSignIn(opts?)` | `{ url, state, challenge, verifier }` | Generates and stores state and S256 PKCE; may navigate in browser auto mode |
+| `finishSignIn(opts?)` | `Session` | Exchanges the code, processes the token, stores it, clears pending state/verifier, and emits `auth` |
+| `getSession({ verify? })` | `Session | null` | Reprocesses the in-memory token; `verify: true` calls `/userinfo` |
+| `setSession({ access_token, verify? })` | `Session` | Processes and stores a supplied token, then emits `auth` |
+| `logout()` | `null` | Clears an in-memory session and stored token, then emits local logout |
+| `clone(opts?)` | A new client | Shallow-copies configuration and current state; listeners are not copied |
+| `on(event, callback)` | `void` | Adds a synchronous listener |
+| `off(event, callback)` | `void` | Removes the exact callback reference |
+
+### `startSignIn()`
+
+```ts
+await auth.startSignIn({
+  redirect_uri?: string,
+  scopes?: Scope[],
+  auto_redirect?: boolean,
+});
+```
+
+The client derives `client_id` as `origin:<redirect URI origin>`, generates a 32-character state and 64-character verifier, creates an S256 challenge, and stores state/verifier before returning. Treat the verifier as temporary secret material.
+
+Starting another flow with the same storage namespace overwrites the one stored state/verifier pair. Concurrent sign-ins are not reliably supported.
+
+### `finishSignIn()`
+
+In a browser, omitting `code` makes the client read `code` and `state` from the current URL, compare state exactly, and use the stored verifier. Supplying `code` explicitly skips URL parsing and state validation, even in a browser.
+
+Server integrations must validate and consume state outside the client, then call:
+
+```ts
+await auth.finishSignIn({ code, verifier });
+```
+
+Despite the exported `FinishSignInResult` type representing a token-response shape, the method currently returns `Session` on success.
+
+State and verifier are removed only after both token exchange and token processing succeed. The client does not clean callback query parameters unless it navigates to `redirect_to`; manual browser integrations should replace the callback URL after success.
+
+### Verification behavior
+
+`getSession({ verify: true })` and `setSession({ ..., verify: true })` call `/userinfo`; they do not fetch JWKS or perform local JWK verification. `finishSignIn()` has no `verify` option and uses the environment default.
+
+Without remote checking, token processing only parses JWT shape, rejects an already expired numeric `exp`, and copies selected claims. It does not verify signature, issuer, audience, algorithm, `kid`, nonce, token type, or authorization server.
+
+### `logout()`
+
+Client logout is local. It does not revoke a token, end the Unbound login session, or sign out of Google, GitHub, or Discord. It removes only the token, not pending state/verifier. If no in-memory session exists, it is a no-op and may leave a stale token in storage.
+
+## Members
+
+| Member | Type | Notes |
+| --- | --- | --- |
+| `ready` | `boolean` | Initialization completed; does not mean authenticated |
+| `user` | `Session | null` | Entire session despite the name; profile is `auth.user?.user` |
+| `config` | `Readonly<T>` | Runtime getter returns the current object, not a defensive copy |
+
+The `config` property has a partial-merge setter at runtime even though its declared type emphasizes a readonly getter. Nested mutation and JavaScript callers can still mutate the returned object; treat that as an implementation caveat, not a supported configuration pattern.
+
+## Events
+
+| Event | Payload |
+| --- | --- |
+| `ready` | Optional `session` (`Session` or `null`) |
+| `auth` | A required `session` (`Session`) |
+| `logout` | A `reason`: `user`, `expired`, or `revoked` |
+
+Listeners run synchronously and listener exceptions are not isolated. `on()` returns `void`, not an unsubscribe function. Keep the exact callback to pass to `off()`.
+
+## Session shape
+
+```ts
+interface Session {
+  user?: {
+    id: string;
+    name?: string;
+    picture?: string;
+    email?: string;
+    email_verified?: boolean;
+  };
+  access_token: string;
+  expires_at?: number;
+  expires_in?: number;
+}
+```
+
+`expires_at` is Unix seconds. `expires_in` is recalculated from it when available. A token without a numeric `exp` has no browser expiry timer and can remain stored indefinitely; app-side token validation should require expiration.
+
+## Storage adapters
+
+`StorageAdapter` handles three exact keys:
+
+```ts
+type StorageAdapterKey = "token" | "verifier" | "state";
+```
+
+It requires asynchronous `get`, `set`, and `remove` methods and may implement batch `query` and `mutate` methods. In batch mutation, `null` means delete.
+
+The browser adapter defaults to `unbound_token` in `localStorage` and `unbound_verifier`/`unbound_state` in `sessionStorage`. Use distinct prefixes for independent clients on the same origin.
+
+The cookie adapter supports middleware and direct request/response modes. Its defaults are `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, no domain, and the `unbound_` prefix. Default Secure cookies are not sent over ordinary HTTP development origins.
+
+Keep a cookie-middleware base client uninitialized and free of request state before cloning it, and never reuse a request-scoped client across requests. See the [storage guide](/docs/client/storage) for deployment patterns and [Errors](/docs/reference/errors) for error classes and codes.

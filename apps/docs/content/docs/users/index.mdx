@@ -1,0 +1,52 @@
+---
+title: Unbound for users
+description: Understand what happens when an app asks you to sign in through Unbound and who controls each part of the experience.
+---
+
+Unbound lets an app connect to an external sign-in provider without requiring you to create a separate Unbound account.
+
+## What happens during sign-in
+
+When an app uses Unbound:
+
+1. The app sends you to an Unbound authorization request.
+2. You check the app origin and the information it requests.
+3. You choose an available provider, currently Google, GitHub, or Discord depending on the deployment.
+4. You authenticate with that provider if needed.
+5. You approve or deny the app’s request.
+6. After approval, Unbound returns you to the app so it can complete sign-in.
+
+You can deny a request that is unexpected or asks for information you do not want to share.
+
+## Who controls what
+
+| Party | Responsibility |
+|---|---|
+| **Your provider** | Manages your provider account, credentials, provider login, and its own account and privacy rules. |
+| **Unbound** | Brokers the sign-in, shows the app origin and requested scopes, and issues the app a short-lived identity token after approval. |
+| **The app** | Decides whether you can access the app, which roles or permissions you have, and how it stores and uses approved data. |
+
+Unbound authenticates identity for the app. It does not make the app trustworthy or control what the app does after it receives approved information.
+
+## Your app-scoped Unbound ID
+
+The app receives a pairwise Unbound ID derived for that app origin. A different app origin receives a different ID for the same provider identity.
+
+This design reduces direct cross-app correlation through one shared Unbound identifier. It does not guarantee anonymity or make tracking and correlation impossible; apps and providers can have other information and operate under their own policies.
+
+## What Unbound is not
+
+Unbound is not:
+
+- a separate user account you can recover;
+- the app’s permission, role, or moderation system;
+- a guarantee that an app is legitimate or safe;
+- a replacement for managing your provider account with the provider; or
+- a way to revoke data an app has already received.
+
+## Learn more
+
+<Cards>
+  <Card title="Sign in safely" description="Check the app origin, review requested information, and respond to unexpected requests." href="/docs/users/sign-in" />
+  <Card title="Privacy and control" description="Learn where sign-in data may be processed and which choices remain yours." href="/docs/users/privacy-and-control" />
+</Cards>

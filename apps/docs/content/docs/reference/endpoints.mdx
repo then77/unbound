@@ -1,0 +1,206 @@
+---
+title: Endpoint reference
+description: Current Unbound routes, authorization parameters, token exchange, discovery metadata, and userinfo behavior.
+---
+
+Unbound exposes OIDC-style discovery and an authorization-code flow. Endpoint URLs and the issuer are derived from the origin of the incoming request.
+
+## Protocol endpoints
+
+| Method | Path | Purpose | Normal response |
+| --- | --- | --- | --- |
+| `GET` | `/.well-known/openid-configuration` | Discovery metadata | JSON |
+| `GET` | `/.well-known/jwks.json` | Current public signing key | JSON `{ "keys": [...] }` |
+| `GET` | `/authorize` | Authenticate the user and display consent | HTML or redirect to `/login` |
+| `POST` | `/authorize` | Accept an allow or deny decision | Redirect to the app |
+| `POST` | `/token` | Exchange an authorization code | JSON token response or handled JSON error |
+| `GET` | `/userinfo` | Return selected claims from a bearer token | JSON or `401` JSON |
+
+## Discovery
+
+`GET /.well-known/openid-configuration` advertises:
+
+```json
+{
+  "issuer": "https://unbound.example",
+  "authorization_endpoint": "https://unbound.example/authorize",
+  "token_endpoint": "https://unbound.example/token",
+  "userinfo_endpoint": "https://unbound.example/userinfo",
+  "jwks_uri": "https://unbound.example/.well-known/jwks.json",
+  "response_types_supported": ["code"],
+  "subject_types_supported": ["pairwise"],
+  "id_token_signing_alg_values_supported": ["<configured algorithm>"],
+  "token_endpoint_auth_methods_supported": ["none"],
+  "prompt_values_supported": ["consent", "login"],
+  "code_challenge_methods_supported": ["S256"],
+  "scopes_supported": ["openid", "profile", "email"],
+  "grant_types_supported": ["authorization_code"]
+}
+```
+
+The advertised claims are `iss`, `sub`, `aud`, `iat`, `exp`, `name`, `picture`, `email`, `email_verified`, and `nonce`. Issued tokens also contain `jti`, although discovery does not list it.
+
+`prompt_values_supported` reflects advertised metadata only. Supplying `prompt=consent` or `prompt=login` does not change current authorization behavior.
+
+## JWKS
+
+`GET /.well-known/jwks.json` returns the configured public JWK in a one-element `keys` array:
+
+```json
+{
+  "keys": [{ "kty": "EC", "kid": "example-key", "alg": "ES256" }]
+}
+```
+
+Only one current key is published. The server source does not implement a historical rotation set or an explicit JWKS cache policy. See [Tokens and claims](/docs/reference/tokens-and-claims) for validation guidance.
+
+## Authorization request
+
+Send the browser to `GET /authorize` with these query parameters.
+
+### Required parameters
+
+| Parameter | Requirement |
+| --- | --- |
+| `client_id` | `origin:` followed by an HTTPS origin, for example `origin:https://app.example.com` |
+| `response_type` | Exactly `code` |
+| `redirect_uri` | A valid URL whose origin exactly matches the origin in `client_id` |
+| `scope` | A space-delimited, non-empty combination of `openid`, `profile`, and `email` |
+
+Ports may be part of the app origin. Client registration and client secrets are not used; the app identity is its HTTPS origin.
+
+### Optional parameters
+
+| Parameter | Requirement | Behavior |
+| --- | --- | --- |
+| `state` | Any string | Returned after approval only |
+| `code_challenge` | Base64url characters, maximum 128 characters | Binds the code to a verifier |
+| `code_challenge_method` | `S256` | Required when `code_challenge` is supplied |
+| `nonce` | Base64url characters | Copied into the issued JWT |
+
+The server does not require `state` or PKCE for every request. A challenge without a method is rejected, while a method without a challenge is currently accepted. The server does not enforce an RFC-style minimum challenge length; `/token` accepts any non-empty verifier and imposes no verifier character-set or maximum-length rule.
+
+<Callout title="Security requirement" type="warning">
+  Apps should still use unpredictable `state` and S256 PKCE. The official TypeScript client generates both. Server integrations must store, compare, and consume `state` themselves.
+</Callout>
+
+`openid` is optional. It controls whether `id_token` appears in the token response; it is not required to receive an access token.
+
+If the user does not have an Unbound login session, the server redirects to `/login` and resumes the original root-relative authorization URL after provider sign-in. Invalid authorization parameters render an HTML validation page rather than redirecting an error to the app.
+
+## Consent result
+
+`POST /authorize` retains the validated authorization parameters in the query string and accepts one form field:
+
+| Field | Values |
+| --- | --- |
+| `result` | `allow` or `deny` |
+
+On approval, Unbound redirects to the exact `redirect_uri` with:
+
+```text
+https://app.example.com/callback?code=<authorization-code>&state=<state>
+```
+
+`state` is included only when it was supplied.
+
+On denial, Unbound redirects with `error=access_denied`. The current consent UI's Cancel link and the `result=deny` POST path both omit the original `state`.
+
+## Token exchange
+
+Send URL-encoded form data to `POST /token`:
+
+```http
+POST /token HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=authorization_code&code=<code>&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&client_id=origin%3Ahttps%3A%2F%2Fapp.example.com&code_verifier=<verifier>
+```
+
+### Form fields
+
+| Field | Required | Requirement |
+| --- | --- | --- |
+| `grant_type` | Yes | Exactly `authorization_code` |
+| `code` | Yes | Non-empty authorization code |
+| `redirect_uri` | Yes | Valid URL and exact string match with the URI stored in the code |
+| `client_id` | Usually | Non-empty; may instead be supplied through Basic auth |
+| `code_verifier` | When PKCE was used | Non-empty and must produce the stored S256 challenge |
+
+The client ID must exactly match the one derived during authorization. A client ID without the `origin:` prefix receives an additional corrective hint.
+
+The server can also read a client ID from `Authorization: Basic <base64>`. Everything before the last decoded colon is treated as the client ID; the password is ignored. This is only an alternate transport for a public client ID, not client-secret authentication. A Basic-supplied ID takes precedence over the form field.
+
+### Success response
+
+```json
+{
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "access_token": "<signed-jwt>",
+  "id_token": "<same-signed-jwt>"
+}
+```
+
+`id_token` is present only when `openid` was requested. When present, it is currently identical to `access_token`. No refresh token is returned.
+
+The default authorization-code lifetime is 120 seconds. Code-use records are optional; without KV, a code can be exchanged more than once before expiration. Even with KV, the replay check is a non-atomic read followed by a write. Restart expired or used flows instead of retrying an old callback.
+
+See [Errors](/docs/reference/errors) for handled `400` responses.
+
+## Userinfo
+
+Send the access token as a bearer token:
+
+```http
+GET /userinfo HTTP/1.1
+Authorization: Bearer <access-token>
+Accept: application/json
+```
+
+A successful response includes only correctly typed claims from this list:
+
+```json
+{
+  "sub": "app-scoped-id",
+  "name": "Example User",
+  "picture": "https://example.com/avatar.png",
+  "email": "user@example.com",
+  "email_verified": true
+}
+```
+
+`sub` is required. The other fields are optional. `/userinfo` does not return `iss`, `aud`, `iat`, `exp`, `jti`, or `nonce`.
+
+The endpoint verifies the JWT signature and relevant time constraints, but it does not pass an expected issuer or audience to its verifier. Apps must not treat a successful `/userinfo` call as a substitute for their own issuer and audience validation.
+
+## User-facing routes
+
+These HTML routes support the Unbound login session and provider flow. They are not downstream app API endpoints.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/` | Home page |
+| `GET` | `/terms` | Terms page |
+| `GET` | `/privacy` | Privacy page |
+| `GET` | `/login` | Provider selection; optional root-relative `redirect_to` |
+| `GET` | `/auth/:provider` | Start Google, GitHub, or Discord sign-in |
+| `GET` | `/auth/:provider/callback` | Complete provider sign-in |
+| `GET` | `/profile` | Display the current Unbound identity |
+| `POST` | `/logout` | Clear the Unbound login session and redirect home |
+
+The upstream provider flow uses its own state and S256 PKCE values. Provider denial callbacks that do not contain both `code` and `state` currently follow a generic invalid-callback path.
+
+## Not implemented
+
+The current server does not expose:
+
+- refresh tokens or a refresh grant;
+- token revocation or introspection;
+- dynamic client registration;
+- device authorization;
+- pushed authorization requests (PAR);
+- a downstream end-session endpoint.
+
+Local or Unbound logout therefore does not revoke an already issued token. A valid token remains usable until expiration unless the app applies a stricter session policy.

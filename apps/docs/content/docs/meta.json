@@ -1,8 +1,16 @@
 {
   "pages": [
     "index",
-    "---Another---",
-    "test",
-    "..."
+    "---Start here---",
+    "quickstart",
+    "users",
+    "---Learn---",
+    "concepts",
+    "---Build---",
+    "client",
+    "---Reference---",
+    "reference",
+    "security",
+    "troubleshooting"
   ]
 }

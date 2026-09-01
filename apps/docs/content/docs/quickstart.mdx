@@ -1,0 +1,212 @@
+---
+title: Quickstart
+description: Add Unbound sign-in with the npm package or global browser bundle and display the authenticated user.
+---
+
+This guide uses the result-returning `unbound-auth` API. Choose the manual npm flow below or the automatic global browser bundle. Starting sign-in and completing the callback are always separate browser steps with a redirect between them.
+
+<Callout title="Alpha status" type="warning">
+  Unbound and `unbound-auth` are alpha software. APIs and behavior may change. Review the security and storage choices before using this flow in production.
+</Callout>
+
+## Prerequisites
+
+You need:
+
+- an HTTPS app origin and callback, such as `https://app.example.com/auth/callback`;
+- a browser with `fetch`, Web Crypto, `localStorage`, and `sessionStorage` available;
+- an Unbound deployment whose authorization, token, and userinfo endpoints are reachable by your integration;
+- a callback route that loads the same client configuration as the page that starts sign-in.
+
+## Choose how to load the client
+
+### npm package
+
+Use your package manager, then continue with the manual flow in steps 2–6:
+
+```sh tab="pnpm"
+pnpm add unbound-auth
+```
+
+```sh tab="npm"
+npm install unbound-auth
+```
+
+```sh tab="Yarn"
+yarn add unbound-auth
+```
+
+### Global browser bundle
+
+Use the browser bundle when you want to add Unbound without a package build step:
+
+```html
+<script src="https://unpkg.com/unbound-auth@latest/dist/unbound.min.js"></script>
+```
+
+It exposes a pre-created global `Unbound` client and adds `Unbound.create()` for independent clients. Bundle clients default to `auto_redirect: true` and `redirect_to: "/"`.
+
+Example for the sign-in and callback pages:
+
+```html
+<button id="sign-in" type="button">Sign in</button>
+
+<script src="https://unpkg.com/unbound-auth@latest/dist/unbound.min.js"></script>
+<script>
+  document.querySelector("#sign-in").addEventListener("click", async () => {
+    const { error } = await Unbound.startSignIn();
+
+    if (error) {
+      showSignInError(error.message);
+    }
+  });
+</script>
+```
+
+On `/auth/callback`, load the bundle and create the same configured client. Its automatic callback handler finishes sign-in and replaces the page with `/dashboard`. Do **not** also call `finishSignIn()` manually on that callback page.
+
+<Callout title="Pin production versions" type="warning">
+  The `latest` URL is useful for trying the bundle, but it can change independently of your app. Pin a tested version for production, especially while the client is in alpha.
+</Callout>
+
+If you use the bundle path, continue with [sessions and events](/docs/client/sessions) after confirming the redirect. The remaining steps on this page demonstrate the separate manual npm flow.
+
+## 2. Create one shared npm client
+
+Create a module used by both your sign-in UI and callback route:
+
+```ts
+// auth.ts
+import { createUnboundClient } from "unbound-auth";
+
+export const auth = createUnboundClient({
+  redirect_uri: "/auth/callback",
+  scopes: ["openid", "profile", "email"],
+});
+```
+
+In a browser, the relative callback resolves against the current app origin. The official client derives the public client ID from that origin and uses S256 PKCE.
+
+Request only the scopes your app needs. This example requests all current scopes so the returned session can include profile and email fields when the provider supplies them.
+
+## 3. Start sign-in
+
+Call `startSignIn()` from a button or other user action, handle both result branches, and then navigate to the returned URL:
+
+```ts
+// sign-in.ts
+import { auth } from "./auth";
+
+export async function signIn() {
+  const { data, error } = await auth.startSignIn();
+
+  if (error) {
+    showSignInError(error.message);
+    return;
+  }
+
+  window.location.assign(data.url);
+}
+```
+
+<Callout title="Keep the steps separate" type="error">
+  Do not call `finishSignIn()` immediately after `startSignIn()`. The browser must first visit Unbound, let the user complete or deny the request, and return to the callback with `code` and `state`.
+</Callout>
+
+The client stores the pending state and PKCE verifier in tab-scoped `sessionStorage` by default. Do not log the returned state, verifier, code, or token.
+
+## 4. Complete the callback
+
+On `/auth/callback`, call `finishSignIn()` without an explicit code. The browser client reads `code` and `state` from the current URL, compares the returned state with the stored value, exchanges the code, and returns a session.
+
+```ts
+// auth-callback.ts
+import { AuthUnboundError } from "unbound-auth";
+import { auth } from "./auth";
+
+export async function completeSignIn() {
+  const { data: session, error } = await auth.finishSignIn();
+
+  if (error) {
+    const message =
+      error instanceof AuthUnboundError
+        ? `Sign-in failed (${error.code})`
+        : "Sign-in could not be completed";
+
+    showSignInError(message);
+    return;
+  }
+
+  history.replaceState(null, "", "/dashboard");
+  showSignedInUser(session.user);
+}
+```
+
+Run `completeSignIn()` when the callback route loads. Cleaning the URL after success removes the one-time callback values from the visible address and browser history.
+
+This is the **manual** callback mode. Do not also configure `auto_redirect: true` with `redirect_to` and rely on automatic callback completion; manual and automatic completion can race.
+
+## 5. Read the current session
+
+`auth.user` is the full session, not only the profile. The profile is available at `auth.user?.user`:
+
+```ts
+await auth.initialize();
+
+const session = auth.user;
+const profile = session?.user;
+
+if (profile) {
+  showSignedInUser({
+    id: profile.id,
+    name: profile.name,
+    email: profile.email,
+  });
+}
+```
+
+The browser client stores the token in `localStorage` by default. Any script running on the app origin can read it, so an XSS vulnerability can expose it.
+
+<Callout title="Security requirement" type="warning">
+  Browser-default token processing decodes the JWT and checks its shape and expiration, but does not cryptographically verify its signature, issuer, audience, algorithm, or key. Do not use decode-only data as an authorization boundary. Validate tokens on a trusted backend before creating a privileged app session.
+</Callout>
+
+## 6. Log out locally
+
+Handle the result from `logout()` just like other client operations:
+
+```ts
+const { error } = await auth.logout();
+
+if (error) {
+  showSignInError("Local logout failed");
+} else {
+  showSignedOutState();
+}
+```
+
+Local logout removes the client’s current local token when a session is loaded. It does not sign the user out of Google, GitHub, or Discord, revoke an issued token, or end an app session stored elsewhere.
+
+## Verify the result
+
+A successful integration should:
+
+1. leave the app for the Unbound authorization screen;
+2. return to `/auth/callback` after approval;
+3. display `session.user` without printing the access token;
+4. replace the callback URL with a clean app URL; and
+5. show the signed-out state after local logout.
+
+<Callout title="Sign-in complete" type="success">
+  If the user profile appears and the callback parameters have been removed, the browser flow completed successfully. Token validation and app authorization are still separate app responsibilities.
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Card title="Client overview" description="Review npm and browser-bundle APIs, defaults, and environments." href="/docs/client" />
+    <Card title="Browser integration" description="Choose manual or automatic callback handling and understand browser storage." href="/docs/client/browser" />
+  <Card title="Server integration" description="Exchange the code on a backend and create an app-managed session." href="/docs/client/server" />
+  <Card title="Tokens and claims" description="Review token fields and the validation checks your app must perform." href="/docs/reference/tokens-and-claims" />
+  <Card title="Security and privacy" description="Evaluate trust boundaries and production responsibilities." href="/docs/security" />
+</Cards>

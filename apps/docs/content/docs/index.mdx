@@ -1,53 +1,57 @@
 ---
 title: Introduction
-description: Unbound is a simple, easy-to-use, privacy focused auth broker. 
+description: Unbound is a stateless authentication broker that connects apps to external sign-in providers without creating a separate Unbound account.
 ---
 
-![Unbound explanation](/images/explanation.webp)
+![A user signs in to an app through Unbound and an external provider](/images/explanation.webp)
 
-## What's Unbound?
+## What Unbound is
 
-Unbound is an authentication broker that sits between your app and identity providers. Users sign in with accounts they already have without signup required. Developers get a standard auth flow without building their own provider integrations or managing user credentials.
+Unbound is an authentication broker between an app and an external sign-in provider. A user signs in with an existing provider account, reviews what the app requests, and returns to the app without creating a separate Unbound account.
 
-## Get started
+The current implementation can connect to Google, GitHub, and Discord when those providers are configured. Provider availability can change during the alpha.
 
-<Callout title="Unbound is still in development." type="warn">
-    While most features are already working, It might still have missing/buggy
-    features. Feel free to use it. If you have ideas to add or
-    find buggy features, make an issue/PR in the GitHub repo!
+For apps, Unbound implements an authorization-code flow with OIDC-style discovery, signed JWT bearer tokens, and pairwise identities scoped to each app origin. The official `unbound-auth` client is the recommended integration path and is available as an npm package or a global browser bundle.
+
+## Choose your path
+
+<Cards>
+  <Card title="Start the quickstart" description="Add sign-in with the npm package or global browser bundle." href="/docs/quickstart" />
+  <Card title="Use Unbound safely" description="Understand the sign-in screen, requested data, and your choices." href="/docs/users" />
+  <Card title="Build with the client" description="Use npm or the browser bundle, choose an integration, and manage sessions." href="/docs/client" />
+  <Card title="Learn the core concepts" description="Explore the flow, stateless design, identity, scopes, and claims." href="/docs/concepts" />
+</Cards>
+
+## What “stateless” means
+
+Unbound keeps its browser login state and user data in a local encrypted, integrity-protected cookie instead of a normal server-side user-profile session database. Authorization codes carry an encrypted payload, and issued JWTs are self-contained and signed.
+
+<Callout title="Privacy boundary" type="info">
+  “Stateless” describes the identity and session architecture. Unbound still processes data needed to complete sign-in. Temporary technical records or logs may exist for flow state, replay mitigation, flash messages, security, debugging, and legal needs. A deployment can also record authorization-code use in Cloudflare KV.
 </Callout>
 
-### For users
+Learn more in [Stateless design](/docs/concepts/stateless-design).
 
-When an app uses Unbound for authentication:
+## How sign-in works
 
-1. Click the sign-in button in the app
-2. Choose your preferred provider (Google, GitHub, or Discord)
-3. Review what the app is requesting (profile info, email, etc.)
-4. Approve the request to complete sign-in
+1. The user starts sign-in in an app.
+2. The app sends the browser to Unbound with a callback URL and requested scopes.
+3. Unbound asks the user to sign in through an available provider.
+4. The user reviews the app origin and requested data, then approves or denies the request.
+5. After approval, Unbound returns a short-lived authorization code to the app callback.
+6. The app exchanges the code for a short-lived signed JWT bearer token.
+7. The app validates the identity and creates its own session and access rules.
 
-Your Unbound ID is unique to each app, so different apps cannot track you across services.
+See [How Unbound works](/docs/concepts/how-it-works) for the actors and trust boundaries in the complete flow.
 
-### For developers
+## Privacy boundaries
 
-To add Unbound authentication to your app:
+Unbound derives a different pairwise user ID for each app origin. This reduces direct correlation between apps through a shared Unbound identifier, but it does not make tracking or correlation impossible. An app or provider can still process data under its own terms and privacy practices.
 
-1. **Deploy Unbound** — Self-host the server on Cloudflare Workers, Node.js, or Bun
-2. **Configure providers** — Set up OAuth credentials for the sign-in providers you want to support
-3. **Generate keys** — Create a signing key pair (the setup page helps with this)
-4. **Integrate** — Use any standard OpenID Connect library to connect your app
-5. **Validate tokens** — Verify signatures, issuer, audience, and expiration before trusting tokens
+Users decide whether to approve requested scopes. After approval, the app is responsible for how it stores and uses the claims it receives. Unbound does not decide app permissions, roles, moderation, or account access.
 
-Unbound provides standard discovery endpoints at `/.well-known/openid-configuration`, so most OIDC libraries will configure themselves automatically.
+Read [Privacy and control](/docs/users/privacy-and-control) for the user-facing model.
 
-## How it works
-
-1. User visits your app and clicks sign-in
-2. Your app redirects to Unbound's authorization endpoint
-3. User chooses a provider and authenticates with them
-4. User reviews and approves your app's scope request
-5. Unbound issues an authorization code to your app
-6. Your app exchanges the code for a signed identity token
-7. Your app validates the token and creates a session
-
-Unbound acts as a bridge between users, identity providers, and your app, while keeping the flow lightweight and privacy-focused.
+<Callout title="Alpha status" type="warning">
+  Unbound is alpha software. APIs and behavior may change, compatibility coverage is limited, and production use requires independent security, privacy, and operational review.
+</Callout>

@@ -1,0 +1,10 @@
+{
+  "title": "Reference",
+  "pages": [
+    "index",
+    "endpoints",
+    "tokens-and-claims",
+    "client-api",
+    "errors"
+  ]
+}

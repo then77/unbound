@@ -1,0 +1,52 @@
+---
+title: Sign in safely
+description: Review an Unbound authorization request and decide whether to approve it.
+---
+
+An Unbound sign-in screen is an authorization request from an app. Take a moment to verify where you are going and what the app wants before continuing.
+
+## 1. Check the app origin
+
+The request shows the app origin—the scheme and host identifying the destination app, such as `https://app.example.com`.
+
+Make sure it is the site you intended to use. Look for misspellings, unexpected subdomains, or an origin unrelated to the app that sent you there. If it does not match your expectation, cancel the request and return to the app through a known address.
+
+<Callout title="Evaluate the destination app" type="warning">
+  Unbound authentication does not guarantee that the destination app is trustworthy. Unbound confirms identity for the app; you must evaluate the app and its privacy practices separately.
+</Callout>
+
+## 2. Choose a provider
+
+A deployment can currently offer Google, GitHub, or Discord. Only configured providers appear.
+
+Signing in sends you to the provider’s own service. Check the provider address before entering credentials. Unbound does not ask you to create a separate password and does not control the provider’s availability, account rules, or login security.
+
+## 3. Review requested information
+
+The current scopes are:
+
+| Request | What it means |
+|---|---|
+| `openid` | The token response includes an ID token for the approved identity flow. |
+| `profile` | The app may receive your name and profile picture when available. |
+| `email` | The app may receive your email address and, when available, an email-verification claim. |
+
+A requested field can still be absent if the provider does not supply it. Approve only the information you expect the app to need.
+
+## 4. Approve or deny
+
+Choose **Allow** only when you recognize the app origin and accept the requested scopes. Choose **Cancel** or deny the request when it is unexpected, asks for more than you want to share, or follows a link you do not trust.
+
+After approval, Unbound returns a short-lived authorization code to the app callback. The app exchanges it for a token and decides whether to create an app session. After denial, the app receives an access-denied result, although its error screen may vary.
+
+## If sign-in fails or expires
+
+Authorization callbacks and codes are temporary. If you see an expired-code, used-code, missing-state, or invalid-callback error:
+
+1. return to the app through a known address;
+2. start a new sign-in attempt; and
+3. complete it in the same browser tab when possible.
+
+Do not repeatedly reload or share an old callback URL. Starting again creates fresh flow values and avoids reusing expired or previously processed callback data.
+
+For data-handling details, read [Privacy and control](/docs/users/privacy-and-control).

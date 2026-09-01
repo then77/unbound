@@ -1,0 +1,111 @@
+---
+title: Handle client errors
+description: Classify TypeScript client failures and recover safely from sign-in and session errors.
+---
+
+Most client operations return expected failures in `{ data, error }`. Handle the result before using `data`:
+
+```ts
+import {
+  APIUnboundError,
+  AuthUnboundError,
+} from "unbound-auth";
+
+const { data: session, error } = await auth.getSession({ verify: true });
+
+if (error instanceof AuthUnboundError) {
+  handleAuthFailure(error.code);
+} else if (error instanceof APIUnboundError) {
+  handleServiceFailure(error.code, error.status);
+} else if (error) {
+  handleUnexpectedFailure(error);
+} else {
+  renderSession(session);
+}
+```
+
+Do not assume expected auth failures throw. `initialize()` is an exception to the result pattern and can reject, as can synchronous adapter setup misuse or application event callbacks.
+
+## Error classes
+
+| Class | Meaning | Useful fields |
+| --- | --- | --- |
+| `AuthUnboundError` | Authorization, callback, or token condition the app can classify | `code`, `message` |
+| `APIUnboundError` | Network or unexpected server response | `code`, `status`, `cause` |
+| `UnboundError` | Base package error | `code`, `message` |
+| `Error` | Unexpected runtime, adapter, or listener failure | `name`, `message` |
+
+`APIUnboundError.code` can be `NETWORK_ERROR`, `SERVER_ERROR`, or `UNKNOWN`. Network failures can include unavailable `fetch`, invalid JSON, and other request-time failures.
+
+## Start errors
+
+| Code | Cause | Response |
+| --- | --- | --- |
+| `MISSING_REDIRECT_URI` | No valid callback can be resolved | Configure an HTTP(S) callback; servers need an absolute URL |
+| `MISSING_SCOPES` | No supported scopes remain | Request at least one of `openid`, `profile`, or `email` |
+| Other `Error` | Web Crypto, URL, or storage failed | Fix runtime/storage access before retrying |
+
+```ts
+const { data, error } = await auth.startSignIn();
+
+if (error) {
+  showSignInError(error);
+} else {
+  window.location.assign(data.url);
+}
+```
+
+The callback belongs on a separate page or route after authorization server navigation.
+
+## Callback errors
+
+| Code | Typical cause | Safe recovery |
+| --- | --- | --- |
+| `MISSING_CODE` | Callback has no authorization code | Start a fresh sign-in |
+| `MISSING_STATE` | Callback has no state | Start a fresh sign-in |
+| `INVALID_STATE` | Returned state differs from stored state | Reject the callback and restart |
+| `MISSING_VERIFIER` | Pending PKCE verifier was lost | Restart in the same tab/storage context |
+| `INVALID_VERIFIER` | Verifier does not match the code challenge | Reject and restart |
+| `INVALID_CODE` | Code is malformed or cannot be accepted | Restart; do not reuse it |
+| `EXPIRED_CODE` | Callback code exceeded its lifetime | Start a fresh sign-in |
+| `USED_CODE` | The server recorded prior code use | Start a fresh sign-in |
+| `INVALID_REDIRECT_URI` | Exchange callback differs from authorization callback | Correct configuration, then restart |
+| `INVALID_CLIENT_ID` | Callback origin/client binding differs | Correct origin configuration, then restart |
+
+<Callout title="Security requirement" type="warning">
+  Never ignore a state mismatch. Server flows and browser flows that pass `code` explicitly must compare returned state against application-stored state before calling `finishSignIn()`.
+</Callout>
+
+Authorization denial currently arrives as `error=access_denied`, and the browser client does not parse it as a dedicated callback error. Because denial may omit state, `finishSignIn()` commonly reports `MISSING_STATE` or `MISSING_CODE`. Detect `error=access_denied` on the callback page when you need a specific cancellation message, discard pending flow state, and offer a new start.
+
+## Token and session errors
+
+| Code | Meaning | Response |
+| --- | --- | --- |
+| `MISSING_TOKEN` | `setSession()` received no token | Require a non-empty trusted token |
+| `INVALID_TOKEN` | Token is malformed or `/userinfo` rejected it | Clear application state and sign in again |
+| `EXPIRED_TOKEN` | Token expiration passed | Start sign-in again |
+
+A browser decode-only result is not proof of token authenticity. Use `getSession({ verify: true })` to check through `/userinfo`, or validate tokens with the trust checks required by your server architecture.
+
+When an initialized session becomes invalid, the client clears its in-memory session and can emit `logout` with `expired` or `revoked`. The stored token may remain, so custom recovery may need to replace storage or begin a clean authorization flow.
+
+## Network and server errors
+
+- `NETWORK_ERROR` covers fetch, response parsing, and unexpected request-time failures.
+- `SERVER_ERROR` covers non-success responses that do not map to a known auth code and malformed successful `/userinfo` data.
+- `status` is available when an HTTP response supplied one.
+- Unexpected server failures are not guaranteed to return JSON.
+
+Retry transient network failures with bounded backoff only when the operation is safe. A callback code may already have been exchanged even if the client did not receive the response.
+
+## Retry safely
+
+- Restart sign-in after missing, invalid, expired, or used callback data.
+- Never reuse a successful callback URL or authorization code.
+- Do not run manual and automatic callback completion together.
+- Consume server-side pending state once, including on rejected callbacks.
+- Preserve error codes for user-facing mapping, but do not display tokens, codes, verifiers, cookies, or raw sensitive server responses.
+- Treat uncertain callback exchange outcomes as non-retryable with the same code; begin a new flow.
+
+For complete recovery placement, see the [browser callback flow](/docs/client/browser#2-finish-on-the-callback) and [server callback route](/docs/client/server#callback-route).

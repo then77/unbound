@@ -1,0 +1,271 @@
+---
+title: Troubleshooting
+description: Symptom-first recovery guidance for apps integrating Unbound authentication.
+---
+
+Start by recording sanitized facts: the failing operation, error class and code, HTTP status, response content type, callback origin/path, and whether the flow ran in a browser or on a server. Never log the authorization code, token, state, PKCE verifier, cookies, private keys, or raw provider response bodies.
+
+## The browser returned, but sign-in did not finish
+
+**Likely causes**
+
+- The callback route created a client with different options or storage prefix.
+- `finishSignIn()` ran before the redirect/callback, or manual and automatic completion both ran.
+- The callback URL contains `error=access_denied` rather than `code` and `state`.
+- A newer sign-in attempt overwrote the one stored state/verifier pair.
+- The callback opened in another tab or storage was blocked.
+
+**Check**
+
+1. Inspect only the callback parameter names, not their values.
+2. Handle `error` before calling `finishSignIn()`.
+3. Confirm the callback uses the same client configuration and browser storage prefix.
+4. Confirm manual mode calls `finishSignIn()` once, on the callback page only.
+5. If `auto_redirect` and `redirect_to` were configured when the client was constructed, confirm no manual finish call races with automatic handling.
+
+**Safe fix**
+
+Discard the callback and start a new sign-in in the same tab. Do not reuse an old code. After success, replace the callback URL to remove `code` and `state` from browser history.
+
+See the [browser integration guide](/docs/client/browser) and [client API](/docs/reference/client-api#finishsignin).
+
+## The global `Unbound` object is unavailable
+
+**Likely causes**
+
+- Your application code ran before `unbound.min.js` loaded.
+- The unpkg request was blocked, failed, or used an incorrect bundle path.
+- The bundle was loaded with a module-only assumption even though it exposes a browser global.
+
+**Safe fix**
+
+Load the bundle before code that reads `Unbound`:
+
+```html
+<script src="https://unpkg.com/unbound-auth@latest/dist/unbound.min.js"></script>
+<script>
+  const auth = Unbound.create({
+    redirect_uri: "/auth/callback",
+    redirect_to: "/dashboard",
+  });
+</script>
+```
+
+Check the script request without pasting callback URLs or credentials into reports. Pin a tested version in production instead of relying on `latest`.
+
+## The browser bundle redirects or finishes twice
+
+**Likely cause**
+
+The global bundle client defaults to `auto_redirect: true` and `redirect_to: "/"`. A client configured with automatic mode already detects and finishes a matching callback. Calling `finishSignIn()` manually on the same page can race with that handler, while creating a different configuration on the callback can prevent detection.
+
+**Safe fix**
+
+Choose one mode:
+
+- For automatic bundle mode, create the same client configuration on the start and callback pages and do not call `finishSignIn()` manually.
+- For manual mode, use the npm browser flow without automatic callback settings.
+
+See the [client overview](/docs/client#browser-bundle) and [browser integration guide](/docs/client/browser#optional-automatic-flow).
+
+## `MISSING_STATE`, `INVALID_STATE`, or `MISSING_VERIFIER`
+
+**Likely causes**
+
+- Pending state or verifier was cleared, blocked, or stored under another prefix.
+- The callback was opened in a different tab; the default state/verifier storage is tab-scoped.
+- Another `startSignIn()` call overwrote the current pending flow.
+- A server integration did not persist pending authorization data.
+- The user denied the request; denial currently omits state.
+
+**Check**
+
+- Browser: confirm `sessionStorage` is available and the callback stays in the original tab.
+- Server: confirm state and verifier are stored in an app-controlled session before redirecting.
+- Compare returned and stored state exactly before exchanging an explicitly supplied code.
+- Check for `error=access_denied` before expecting state or code.
+
+**Safe fix**
+
+Stop processing and restart authorization. A state mismatch is not retryable with the same callback. Server apps must atomically consume pending state so a callback cannot be replayed.
+
+See [Security and privacy](/docs/security#protect-authorization-state).
+
+## `EXPIRED_CODE`, `USED_CODE`, or `INVALID_CODE`
+
+**Likely causes**
+
+- The code exceeded its default 120-second lifetime.
+- The callback was submitted twice or automatic and manual completion raced.
+- An optional KV code-use record already exists.
+- The code was truncated, changed, or issued by a different Unbound deployment.
+
+**Safe fix**
+
+Start a completely new authorization flow. Never retry or queue repeated exchanges of the same code. Prevent duplicate callback submissions in the app and clean the URL immediately after success.
+
+Code-use tracking is optional and non-atomic, so your app should treat every code as single-use even when a duplicate exchange is not rejected. See [Endpoint reference](/docs/reference/endpoints#token-exchange).
+
+## `INVALID_REDIRECT_URI` or `INVALID_CLIENT_ID`
+
+**Likely causes**
+
+- Token exchange used a redirect URI that is not the exact string used during authorization.
+- The app changed scheme, host, port, path normalization, trailing slash, or query string.
+- The client ID is missing `origin:` or does not match the callback's HTTPS origin.
+- Different app instances generated the authorization request and token request from different public origins.
+
+**Check**
+
+- Compare the complete configured callback URI at start and finish.
+- Confirm `client_id` is `origin:<callback origin>`.
+- Use an absolute HTTP(S) callback on a server; production downstream origins must be HTTPS.
+- Avoid reconstructing the callback differently in separate routes.
+
+**Safe fix**
+
+Use one canonical callback value throughout a new flow. Do not alter and retry the old code because the original redirect binding is embedded in it.
+
+## Browser token exchange is blocked by CORS
+
+**Symptom**
+
+The authorization redirect succeeds, but browser `fetch` to `/token` or `/userinfo` fails with a CORS/network error and JavaScript cannot read the response.
+
+**Cause**
+
+The server source does not provide CORS middleware or explicit `Access-Control-Allow-*` handling. A deployment may add CORS externally, but direct cross-origin browser requests cannot assume it.
+
+**Check**
+
+- Confirm the request works from a backend but fails only in browser JavaScript.
+- Inspect browser network diagnostics without copying credentials into tickets or logs.
+- Verify whether the deployed authorization origin explicitly allows your app origin, method, and headers.
+
+**Safe fix**
+
+Use a same-origin proxy or perform code exchange, token validation, and app-session creation on your backend. Do not disable browser security or expose a client secret—Unbound's client model is public and does not use one.
+
+See [Security and privacy](/docs/security#cross-origin-requests).
+
+## A Secure cookie is missing during local development
+
+**Likely cause**
+
+The TypeScript cookie adapter defaults to `Secure`, so browsers do not send its cookies over ordinary `http://` origins. The Unbound service login cookie is also Secure.
+
+**Check**
+
+- Determine whether the missing cookie belongs to your app's cookie adapter or the hosted Unbound origin.
+- Inspect cookie attributes and the request scheme in browser developer tools.
+- Confirm callback and cookie path/domain settings are consistent.
+
+**Safe fix**
+
+Prefer local HTTPS. If you control an app-side cookie adapter, you may deliberately set `secure: false` only for local HTTP development and keep `Secure` enabled in every HTTPS environment. A hosted Unbound cookie cannot be corrected from app code.
+
+See the [storage guide](/docs/client/storage).
+
+## A GitHub user returns to login or never reaches consent
+
+**Likely cause**
+
+The current Unbound login check requires a usable name and email. GitHub identity normalization looks for a primary email; if none is available, a partial identity can be stored but subsequently treated as logged out.
+
+**Check**
+
+- Ask the user to confirm their GitHub account exposes a usable primary email to the authorized integration.
+- Confirm the issue is provider-specific without asking for tokens or raw profile payloads.
+
+**Safe fix**
+
+Have the user update their GitHub email settings and restart sign-in, or choose another available provider. Your app should not invent an email or treat a partial callback as authenticated.
+
+## The token decodes and looks valid, but the app should not trust it
+
+**Cause**
+
+The TypeScript client's default browser path decodes JWT payload shape and expiration only. It does not verify signature, issuer, audience, algorithm, key ID, nonce, token type, or authorization server.
+
+**Safe fix**
+
+Validate the JWT at a trusted boundary before creating the app session. Require the expected key/algorithm, exact issuer, audience `origin:<your app origin>`, expiration, subject, and nonce when used. `getSession({ verify: true })` calls `/userinfo`; it is not local JWKS verification, and `/userinfo` does not enforce expected issuer/audience itself.
+
+See [Tokens and claims](/docs/reference/tokens-and-claims#validate-tokens).
+
+## `/userinfo` returns `invalid_token`
+
+**Likely causes**
+
+- The bearer header is missing or malformed.
+- The token expired.
+- Signature verification failed or `sub` is missing.
+- The token belongs to a different key/deployment.
+
+**Check**
+
+- Send `Authorization: Bearer <token>` over HTTPS.
+- Use the response description only to distinguish `Token is expired` from a generic invalid token.
+- Do not log the token or full response body.
+
+**Safe fix**
+
+Clear the local app session and prompt for a new sign-in. Do not repeatedly retry an expired or invalid token. Even after successful `/userinfo`, independently enforce issuer and audience when trusting the JWT.
+
+See [Error reference](/docs/reference/errors#userinfo-errors).
+
+## The protocol client expected JSON but received HTML
+
+**Likely causes**
+
+- An authorization request failed validation and rendered an HTML page.
+- The authorization service is not configured and returned a setup page.
+- An unexpected server failure rendered a generic retry page.
+
+**Check**
+
+- Record status and `Content-Type` before parsing.
+- Confirm the request uses the correct endpoint, method, and form encoding.
+- Keep response bodies out of normal logs because they may contain operational details.
+
+**Safe fix**
+
+Show a generic retry message to the user. Correct request construction for repeatable validation failures; for temporary service failures, use bounded retries only where safe and report sanitized status metadata to Unbound support.
+
+See [Endpoint reference](/docs/reference/endpoints) and [Error reference](/docs/reference/errors#html-and-unexpected-responses).
+
+## Logout did not sign out everywhere
+
+**Expected behavior**
+
+`auth.logout()` clears the client's local in-memory session and stored token when a session is loaded. It does not revoke the JWT, clear pending state/verifier, end the Unbound browser login session, or sign the user out of Google, GitHub, or Discord.
+
+Unbound exposes no refresh, revocation, introspection, or downstream end-session endpoint. An issued JWT can remain valid until expiration.
+
+**Safe fix**
+
+Clearly label app logout as local, invalidate the app's own session, and discard locally held credentials. If your risk model requires immediate invalidation, enforce it in your app session layer rather than assuming provider or Unbound logout propagation.
+
+## A stale token keeps reappearing
+
+**Likely cause**
+
+Initialization and failed session verification can ignore or clear an in-memory session without deleting an invalid stored token. `logout()` is a no-op when no in-memory session is loaded.
+
+**Safe fix**
+
+Use your storage adapter to remove the stale `token` key as part of controlled recovery, then start a new flow. Avoid broad storage clearing that could remove unrelated app data.
+
+## Before reporting an integration issue
+
+Include only:
+
+- `unbound-auth` version;
+- browser/runtime and whether `server: true` is used;
+- operation and sanitized error class/code;
+- HTTP status and response content type;
+- app origin and callback path, without query values;
+- whether manual or automatic callback handling is configured;
+- whether a custom storage adapter, fetcher, proxy, or CORS layer is involved.
+
+Do not include tokens, codes, state, verifiers, cookies, secrets, private JWKs, or raw provider responses.
