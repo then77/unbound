@@ -147,4 +147,6 @@ pnpm --dir apps/server exec wrangler deploy
 - `apps/docs` — documentation site
 - `packages/client-ts` — the [`unbound-auth`](https://www.npmjs.com/package/unbound-auth) TypeScript client
 
-Contributions and issue reports are always welcome through the [GitHub repository](https://github.com/then77/unbound). (not for meaningless + slop one)
+Contributions and issue reports are welcome through the [GitHub repository](https://github.com/then77/unbound).
+
+Side note: This project is made with help from AI, especially with assisting making docs content.
