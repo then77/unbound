@@ -1,57 +1,57 @@
 ---
 title: Privacy and control
-description: Learn what Unbound may process during sign-in, where login state lives, and which choices remain yours.
+description: Learn what Unbound processes during sign-in, how things are stored, and what choices you have.
 ---
 
-Unbound is designed to broker authentication without maintaining a normal server-side user-profile session database. That boundary is narrower than saying no data is processed or stored anywhere.
+Unbound is designed to connect you to apps without keeping a massive database of your personal profile on its own servers. However, it still needs to handle some information just to make the sign-in process work securely.
 
-## Data processed during sign-in
+## Information handled during sign-in
 
-To complete an approved sign-in, Unbound may process:
+To get you signed in safely, Unbound temporarily handles:
 
-- the identity and profile fields returned by your chosen provider;
-- the destination app origin and callback;
-- the scopes requested by the app;
-- temporary state and PKCE values used to protect the flow;
-- an authorization code and short-lived signed token; and
-- technical request, error, and security information.
+- the profile information sent by your chosen provider (like your name or email);
+- the web address of the app you are trying to use;
+- the specific information the app is asking for;
+- some technical security data to make sure no one intercepts your sign-in; and
+- standard internet traffic logs (like error messages and security checks).
 
-The exact provider fields and availability can change with provider behavior and deployment configuration.
+The exact information depends on what your provider sends and how the service is set up.
 
-## Local Unbound cookie
+## How Unbound remembers you
 
-After provider login, Unbound stores its browser login state and normalized user data in a local encrypted, integrity-protected cookie. The cookie is `HttpOnly`, `Secure`, and `SameSite=Lax` by default. This avoids a normal server-side user-profile session database while allowing the browser to remain signed in to Unbound.
+After you sign in, Unbound saves an encrypted "cookie" in your web browser. This acts like a secure, temporary ID badge so you don't have to keep signing in every time. Because this data is kept safely in your browser, Unbound doesn't need to save your profile in a central database. 
 
-Clearing the Unbound cookie ends that local Unbound browser login state. It does not delete your provider account, sign you out of the provider, remove an app’s own session, revoke issued tokens, or erase information an app previously received.
+If you clear your browser cookies, Unbound will forget you're signed in. However, this won't delete your main provider account (like Google or GitHub), sign you out of the apps you already accessed, or erase the information those apps already collected.
 
-## Pairwise IDs and their limits
+## Unique IDs for every app
 
-Unbound derives a pairwise user ID for each app origin. Different app origins receive different Unbound IDs for the same underlying identity.
+To help protect your privacy, Unbound creates a different, unique ID for you every time you sign in to a *new* app. This means if you use two unrelated apps, they won't realize you are the same Unbound user just by looking at that ID.
 
-This reduces direct correlation through one shared Unbound identifier. It is not a promise of anonymity or untrackability. Apps or providers can have other identifiers, account information, device information, or activity data under their own practices.
+While this makes tracking you across the internet harder, it doesn't make you completely invisible. Apps might still recognize you through other means—such as the email address they asked you to share, or the device you are using—depending on their own privacy policies.
 
-## Temporary records and logs
+## Temporary records
 
 <Callout title="Privacy boundary" type="info">
-  In normal operation, Unbound does not store user profile or account data in a server-side session database. Temporary technical records or logs may still exist for flow state, replay mitigation, flash messages, security, debugging, operations, and legal needs.
+  While Unbound doesn't maintain a giant profile database of its users, it does keep brief technical logs. These are strictly used behind the scenes to keep the sign-in flow secure, fix bugs, and ensure the service runs smoothly.
 </Callout>
 
-A deployment can use Cloudflare KV to record authorization-code use for replay mitigation. This is optional implementation state, not a stored user-profile session. Unbound also necessarily processes identity data while completing the flow and issuing a token.
+During the sign-in process, Unbound has to temporarily process your data so it can securely tell the app who you are. The system might also store check-ins temporarily to prevent security risks (like someone trying to use your sign-in twice), but this isn't used to build a persistent profile of you.
 
-## Provider and app responsibilities
+## Everyone plays their part
 
-Your provider manages its service and provider account under its own terms and privacy policy. Unbound receives provider data needed for the sign-in flow but does not control provider account recovery, security, availability, or retention.
+Your chosen **provider** (like GitHub or Discord) entirely manages your main account. They have their own terms and privacy rules. Unbound just receives the data they send to help you log in.
 
-The destination app is a separate service. After you approve a request, the app is responsible for its own authorization decisions, security, storage, privacy policy, and use of the claims it receives. Unbound cannot withdraw data the app has already received.
+The **app** you sign in to is its own totally separate service. Once you approve a request, the app is responsible for keeping your data safe and deciding what you can do on their site. Unbound can't force an app to delete your data or revoke access once you've handed your info over.
+
 
 ## Your choices
 
-You can:
+You are always in control of the basics. You can:
 
-- deny an authorization request;
-- approve only when you recognize the app and accept its requested scopes;
-- clear the local Unbound cookie to remove Unbound browser login state;
-- use your provider’s controls to manage or secure your provider account; and
-- use the app’s controls or contact the app about data it stores.
+- deny a sign-in request at any time;
+- only approve requests when you recognize the app and are comfortable with what they're asking for;
+- clear your browser cookies to sign out of Unbound;
+- manage your security directly with your provider (like changing passwords or turning on two-factor authentication); and
+- contact the app directly if you want them to delete or change the data they hold.
 
-Read the live [Privacy Policy](https://unbound.rlzy.me/privacy) and [Terms](https://unbound.rlzy.me/terms) for the service’s current legal terms. Those policies, rather than this overview, govern use of the service.
+For the exact legal details, please read the live [Privacy Policy](https://unbound.rlzy.me/privacy) and [Terms](https://unbound.rlzy.me/terms), which explains in details on how the service runs.

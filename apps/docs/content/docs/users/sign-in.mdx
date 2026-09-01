@@ -1,52 +1,54 @@
 ---
 title: Sign in safely
-description: Review an Unbound authorization request and decide whether to approve it.
+description: Review an Unbound sign-in request and decide whether to approve it.
 ---
 
-An Unbound sign-in screen is an authorization request from an app. Take a moment to verify where you are going and what the app wants before continuing.
+When you see an Unbound sign-in screen, an app is asking for permission to access your information. Take a quick moment to check who is asking and what they want before you click anything.
 
-## 1. Check the app origin
+## 1. Verify the app's address
 
-The request shows the app origin—the scheme and host identifying the destination app, such as `https://app.example.com`.
+The request will show the app's web address (like `https://app.example.com`).
 
-Make sure it is the site you intended to use. Look for misspellings, unexpected subdomains, or an origin unrelated to the app that sent you there. If it does not match your expectation, cancel the request and return to the app through a known address.
+Make sure this is the website you actually intended to use. Keep an eye out for misspellings, strange subdomains, or completely unrelated websites. If the address looks suspicious, cancel the request immediately and go back to the app using a bookmark or an address you trust.
 
 <Callout title="Evaluate the destination app" type="warning">
-  Unbound authentication does not guarantee that the destination app is trustworthy. Unbound confirms identity for the app; you must evaluate the app and its privacy practices separately.
+  Just because an app uses Unbound to sign in doesn't automatically mean it's trustworthy. Unbound simply tells the app who you are—it's up to you to verify if the app itself is safe to use.
 </Callout>
 
 ## 2. Choose a provider
 
-A deployment can currently offer Google, GitHub, or Discord. Only configured providers appear.
+If you aren't already logged in to Unbound, you will see options to sign in with services like Google, GitHub, or Discord (depending on what is available). 
 
-Signing in sends you to the provider’s own service. Check the provider address before entering credentials. Unbound does not ask you to create a separate password and does not control the provider’s availability, account rules, or login security.
+When you choose one, you'll be sent to that provider's official website to log in. Always double-check their web address before entering your password. Unbound never asks you for a password directly, and it doesn't control your account on those services.
 
-## 3. Review requested information
+If you are already logged in to Unbound, you will skip this provider choice and go straight to reviewing what the app is asking for.
 
-The current scopes are:
+## 3. Review what they’re asking for
+
+The app might ask for different types of information:
 
 | Request | What it means |
 |---|---|
-| `openid` | The token response includes an ID token for the approved identity flow. |
-| `profile` | The app may receive your name and profile picture when available. |
-| `email` | The app may receive your email address and, when available, an email-verification claim. |
+| `openid` | This is just a standard technical permission required to prove your identity. |
+| `profile` | The app is asking for your name and profile picture. |
+| `email` | The app is asking for your email address and whether it has been verified. |
 
-A requested field can still be absent if the provider does not supply it. Approve only the information you expect the app to need.
+Remember, your provider will only send this information if it is actually available on your account. You should only approve these requests if it makes sense for the app to need them.
 
 ## 4. Approve or deny
 
-Choose **Allow** only when you recognize the app origin and accept the requested scopes. Choose **Cancel** or deny the request when it is unexpected, asks for more than you want to share, or follows a link you do not trust.
+Click **Allow** only if you recognize the app's address and feel comfortable sharing the requested information. Click **Cancel** if the request catches you by surprise, asks for too much, or if you simply clicked a link you aren't sure about.
 
-After approval, Unbound returns a short-lived authorization code to the app callback. The app exchanges it for a token and decides whether to create an app session. After denial, the app receives an access-denied result, although its error screen may vary.
+If you click Allow, Unbound tells the app who you are, and you get signed in. If you click Cancel, the app is told that access was denied, and you will not be signed in.
 
-## If sign-in fails or expires
+## If something goes wrong
 
-Authorization callbacks and codes are temporary. If you see an expired-code, used-code, missing-state, or invalid-callback error:
+For security reasons, the sign-in process happens quickly and connections are temporary. If you take too long, or if you see an error like "expired code" or "invalid state":
 
-1. return to the app through a known address;
-2. start a new sign-in attempt; and
-3. complete it in the same browser tab when possible.
+1. go back to the app using a safe, known address;
+2. click their log-in button to start over; and
+3. try to finish the process in the exact same browser tab.
 
-Do not repeatedly reload or share an old callback URL. Starting again creates fresh flow values and avoids reusing expired or previously processed callback data.
+Don't just keep hitting the refresh button on the error page or try to share the error link with anyone. The easiest and safest way to fix these issues is simply to start the sign-in over.
 
-For data-handling details, read [Privacy and control](/docs/users/privacy-and-control).
+For more details on how your data is handled, check out [Privacy and control](/docs/users/privacy-and-control).

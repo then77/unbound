@@ -3,50 +3,50 @@ title: Unbound for users
 description: Understand what happens when an app asks you to sign in through Unbound and who controls each part of the experience.
 ---
 
-Unbound lets an app connect to an external sign-in provider without requiring you to create a separate Unbound account.
+Unbound helps you sign in to different apps using your existing accounts (like Google, GitHub, or Discord) without having to create a separate Unbound account. 
 
 ## What happens during sign-in
 
 When an app uses Unbound:
 
-1. The app sends you to an Unbound authorization request.
-2. You check the app origin and the information it requests.
-3. You choose an available provider, currently Google, GitHub, or Discord depending on the deployment.
-4. You authenticate with that provider if needed.
-5. You approve or deny the app’s request.
-6. After approval, Unbound returns you to the app so it can complete sign-in.
+1. The app redirects you to Unbound's sign-in page.
+2. You see which app is asking you to sign in and what information it needs.
+3. You choose how you want to sign in (for example, with Google or GitHub).
+4. You sign in with your chosen provider.
+5. You can choose to allow or deny the app's request.
+6. If you allow it, Unbound sends you back to the app so you can finish signing in.
 
-You can deny a request that is unexpected or asks for information you do not want to share.
+You are always in control and can always deny any request if you don't recognize the app or don't want to share your information.
 
 ## Who controls what
 
 | Party | Responsibility |
 |---|---|
-| **Your provider** | Manages your provider account, credentials, provider login, and its own account and privacy rules. |
-| **Unbound** | Brokers the sign-in, shows the app origin and requested scopes, and issues the app a short-lived identity token after approval. |
-| **The app** | Decides whether you can access the app, which roles or permissions you have, and how it stores and uses approved data. |
+| **Your provider** | Manages your account, passwords, and security settings (e.g., Google or GitHub). |
+| **Unbound** | Securely connects you to the app. It makes sure the app gets exactly the information you approved, and nothing more. |
+| **The app** | Decides what you can do once you're signed in and how it uses the information you agreed to share. |
 
-Unbound authenticates identity for the app. It does not make the app trustworthy or control what the app does after it receives approved information.
+Unbound proves who you are to the app, but Unbound does not make the app trustworthy or control what the app does. The app is responsible for what happens after you sign in.
 
-## Your app-scoped Unbound ID
+## Your privacy between apps
 
-The app receives a pairwise Unbound ID derived for that app origin. A different app origin receives a different ID for the same provider identity.
+Unbound gives each app a unique, random ID for you. If you sign in to two different apps using Unbound, they won't get the same Unbound ID.
 
-This design reduces direct cross-app correlation through one shared Unbound identifier. It does not guarantee anonymity or make tracking and correlation impossible; apps and providers can have other information and operate under their own policies.
+This makes it harder for apps to track you across different websites. However, keep in mind this isn't perfect anonymity. Apps and providers might still have other ways to recognize you, like your email address or device, depending on their own policies.
 
 ## What Unbound is not
 
 Unbound is not:
 
-- a separate user account you can recover;
-- the app’s permission, role, or moderation system;
-- a guarantee that an app is legitimate or safe;
-- a replacement for managing your provider account with the provider; or
-- a way to revoke data an app has already received.
+- a separate account you need to remember or recover;
+- a system that decides your user roles, permissions, or access inside an app;
+- a guarantee that an app is safe or trustworthy;
+- a replacement for managing your account directly with Google, GitHub, or Discord; or
+- a way to pull back data from an app after you've already shared it.
 
 ## Learn more
 
 <Cards>
-  <Card title="Sign in safely" description="Check the app origin, review requested information, and respond to unexpected requests." href="/docs/users/sign-in" />
-  <Card title="Privacy and control" description="Learn where sign-in data may be processed and which choices remain yours." href="/docs/users/privacy-and-control" />
+  <Card title="Sign in safely" description="Learn how to review requests and stay safe when signing in." href="/docs/users/sign-in" />
+  <Card title="Privacy and control" description="Understand what happens to your data and the choices you have." href="/docs/users/privacy-and-control" />
 </Cards>
