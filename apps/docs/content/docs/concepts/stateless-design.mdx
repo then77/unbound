@@ -1,0 +1,56 @@
+---
+title: Stateless design
+description: Understand where Unbound keeps login state, authorization data, tokens, and limited technical records.
+---
+
+Unbound’s stateless design keeps normal user-profile login sessions out of a server-side session database. Instead, the main flow uses self-contained browser and protocol values with limited optional state for replay mitigation.
+
+<Callout title="Privacy boundary" type="info">
+  “Stateless” describes the identity and session architecture. It does not mean the server processes no data, writes no records, or retains no temporary technical logs.
+</Callout>
+
+## Local encrypted browser cookie
+
+After a provider login, Unbound stores normalized identity data and login state in one local cookie. The cookie is encrypted and integrity-protected, and its default browser attributes are:
+
+- `HttpOnly`;
+- `Secure`;
+- `SameSite=Lax`;
+- a seven-day maximum age; and
+- a path of `/`.
+
+The server does not use Cloudflare KV or a normal session database to retrieve this browser profile session. Each request presents the cookie for Unbound to decrypt.
+
+Because the cookie is `Secure`, HTTPS is part of the design. Clearing it removes the local Unbound login state but does not affect provider accounts, app sessions, or issued tokens.
+
+## Encrypted authorization code
+
+After approval, Unbound creates a short-lived authorization code whose encrypted payload carries the approved scopes and claims, pairwise subject, callback URI, optional PKCE challenge and nonce, and expiration.
+
+The code is not a database record identifier. Its default validity is 120 seconds, and the token endpoint checks its expiration and exact callback binding.
+
+<Callout title="Current limitation" type="warning">
+  Describe the authorization code as encrypted—not signed, sealed, or tamper-proof. Code-use tracking is optional, so the implementation does not guarantee that every code is always single-use.
+</Callout>
+
+## Signed self-contained token
+
+A successful exchange produces a signed JWT bearer token containing its issuer, pairwise subject, audience, issue time, expiration, token ID, and approved optional claims. The default lifetime is 900 seconds, or 15 minutes.
+
+The token is self-contained, but that does not make it trustworthy without validation. Apps must verify its signature and expected algorithm, key, issuer, audience, expiration, and relevant claims before making authorization decisions.
+
+There is no refresh, revocation, or introspection endpoint in the current implementation. Logout does not invalidate an issued token before expiration.
+
+## Optional code-use records
+
+A deployment can use Cloudflare KV to record that an authorization code was used. Unbound stores a derived record key, the pairwise subject as the value, and a temporary TTL.
+
+Without KV, a code can be exchanged again until it expires. With KV, the check and write are separate rather than an atomic consume operation, so concurrent exchanges can race. KV is replay mitigation, not a transactional authorization-code store.
+
+## Temporary processing and logs
+
+Unbound necessarily processes provider identity, app origin, requested scopes, callback data, cookies, authorization codes, and tokens while serving the flow. Temporary technical records or logs may also exist for flow state, replay mitigation, flash messages, security, debugging, operations, and legal needs.
+
+In normal operation, Unbound does not store user profile or account data in a server-side session database. This qualified boundary should not be shortened to “stores nothing” or “no data touches the server.”
+
+See [Privacy and control](/docs/users/privacy-and-control) for the user-facing choices and [How Unbound works](/docs/concepts/how-it-works) for the complete flow.

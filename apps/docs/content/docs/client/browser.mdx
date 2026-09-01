@@ -1,0 +1,145 @@
+---
+title: Browser integration
+description: Implement manual or automatic Unbound sign-in in a browser application.
+---
+
+A browser client creates the authorization request, stores PKCE and state for the current tab, exchanges the callback code, and persists the resulting token.
+
+## Before you begin
+
+Choose a callback route in your app and register one shared client configuration for both the page that starts sign-in and the callback page. Relative callback paths are resolved against the current app origin.
+
+```ts title="auth.ts"
+import { createUnboundClient } from "unbound-auth";
+
+export const auth = createUnboundClient({
+  redirect_uri: "/auth/callback",
+  scopes: ["openid", "profile", "email"],
+});
+```
+
+If `redirect_uri` is omitted, the browser default is `<app origin>/callback`.
+
+<Callout title="Browser limitation" type="warning">
+  A direct browser exchange calls `/token`, and `verify: true` also calls `/userinfo`. Cross-origin use requires those responses to be made available through deployment-level CORS or a same-origin/backend design. The Unbound server does not itself promise cross-origin browser access.
+</Callout>
+
+## Recommended: manual flow
+
+Manual mode makes navigation, callback errors, and the final destination explicit. Do not configure `auto_redirect` or `redirect_to` on this client.
+
+### 1. Start sign-in
+
+Run this from the sign-in page or button handler:
+
+```ts title="sign-in.ts"
+import { auth } from "./auth";
+
+export async function signIn() {
+  const { data, error } = await auth.startSignIn();
+
+  if (error) {
+    showSignInError(error);
+    return;
+  }
+
+  window.location.assign(data.url);
+}
+```
+
+`startSignIn()` stores one state/verifier pair and returns the authorization URL. The browser must leave your app, complete authorization, and return before the next step runs.
+
+### 2. Finish on the callback
+
+Use the same client configuration on `/auth/callback`:
+
+```ts title="auth-callback.ts"
+import { AuthUnboundError } from "unbound-auth";
+import { auth } from "./auth";
+
+const { data: session, error } = await auth.finishSignIn();
+
+if (error) {
+  if (error instanceof AuthUnboundError) {
+    showCallbackError(error.code);
+  } else {
+    showCallbackError("unknown");
+  }
+} else {
+  history.replaceState(null, "", "/dashboard");
+  showSignedInView(session.user);
+}
+```
+
+With no explicit `code`, browser `finishSignIn()` reads `code` and `state` from the current URL, compares state with the stored value, and uses the stored PKCE verifier. After success, clean the URL so one-time callback values do not remain in browser history or copied links.
+
+<Callout title="Security requirement" type="warning">
+  Do not pass a callback code explicitly in a browser unless your application has already validated the returned state. Supplying `code` skips the client's browser URL parsing and state check.
+</Callout>
+
+## Optional: automatic flow
+
+Automatic mode is a separate integration style. Configure both `auto_redirect` and `redirect_to` when constructing the client on every relevant page:
+
+```ts title="automatic-auth.ts"
+import { createUnboundClient } from "unbound-auth";
+
+export const auth = createUnboundClient({
+  redirect_uri: "/auth/callback",
+  redirect_to: "/dashboard",
+  auto_redirect: true,
+  scopes: ["openid", "profile", "email"],
+});
+```
+
+Start sign-in and still inspect the result in case navigation cannot begin:
+
+```ts title="automatic-sign-in.ts"
+import { auth } from "./automatic-auth";
+
+export async function signIn() {
+  const { data, error } = await auth.startSignIn();
+
+  if (error) {
+    showSignInError(error);
+    return;
+  }
+
+  // Automatic mode navigates to data.url in a detected browser.
+  showRedirectingState(data.url);
+}
+```
+
+On `/auth/callback`, construct the same automatic client. Its construction-time handler detects the callback, finishes sign-in, and replaces the location with `/dashboard`.
+
+<Callout title="Browser limitation" type="warning">
+  Do not call `finishSignIn()` manually on an automatic callback page. The automatic handler already exchanges the code; a second call can race with it. Automatic callback errors are not returned to page code and may appear as an `error` query parameter on `redirect_to`.
+</Callout>
+
+Treat `redirect_to` as trusted application configuration. Do not populate it from untrusted input.
+
+## Tabs and concurrent sign-in
+
+The default browser adapter stores state and verifier in `sessionStorage`, so the callback must return to the same tab. It stores only one pair per prefix. Starting another sign-in with the same storage namespace overwrites the previous pair, so concurrent attempts are not reliable.
+
+Use a distinct [storage prefix](/docs/client/storage#browser-storage) for independent clients on the same origin.
+
+## Token handling in the browser
+
+By default, the browser client decodes the JWT payload locally to check its shape and expiration and to select profile fields. It does **not** verify the signature, issuer, audience, algorithm, or authorization server.
+
+Ask the authorization server to check the current token when the application needs server-confirmed identity:
+
+```ts
+const { data: session, error } = await auth.getSession({ verify: true });
+
+if (error) {
+  showSessionError(error);
+} else if (session) {
+  showSignedInView(session.user);
+} else {
+  showSignedOutView();
+}
+```
+
+`verify: true` calls `/userinfo`; it is not local verification against JWKs. See [sessions and events](/docs/client/sessions) for expiration and logout behavior, and [handle client errors](/docs/client/errors) for callback recovery.

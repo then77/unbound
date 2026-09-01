@@ -1,0 +1,30 @@
+---
+title: Reference
+description: Exact endpoint, token, TypeScript client, and error behavior for the current Unbound implementation.
+---
+
+This reference describes the behavior implemented by Unbound today. It is intended for app developers, protocol integrators, and security reviewers who need exact request and response details.
+
+<Callout title="Alpha status" type="warning">
+  APIs and behavior may change during alpha. Unbound exposes OIDC-style discovery and an authorization-code flow, but this documentation does not claim full OAuth 2.0 or OpenID Connect compliance or compatibility with every generic OIDC client.
+</Callout>
+
+<Cards>
+  <Card title="Endpoints" href="/docs/reference/endpoints">
+    Routes, parameters, validation rules, response shapes, and unsupported protocol features.
+  </Card>
+  <Card title="Tokens and claims" href="/docs/reference/tokens-and-claims">
+    JWT headers, claims, lifetimes, JWKS behavior, and app-side validation requirements.
+  </Card>
+  <Card title="TypeScript client API" href="/docs/reference/client-api">
+    Exports, options, methods, events, sessions, and storage adapter entry points.
+  </Card>
+  <Card title="Errors" href="/docs/reference/errors">
+    Protocol and client error codes with safe recovery actions.
+  </Card>
+  <Card title="Security and privacy" href="/docs/security">
+    Trust boundaries, required app protections, and current implementation limitations.
+  </Card>
+</Cards>
+
+For complete integration workflows, use the [TypeScript client guides](/docs/client) before relying on these lookup pages alone.

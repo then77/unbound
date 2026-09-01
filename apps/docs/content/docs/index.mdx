@@ -1,0 +1,57 @@
+---
+title: Introduction
+description: Unbound is a stateless authentication broker that connects apps to external sign-in providers without creating a separate Unbound account.
+---
+
+![A user signs in to an app through Unbound and an external provider](/images/explanation.webp)
+
+## What Unbound is
+
+Unbound is an authentication broker between an app and an external sign-in provider. A user signs in with an existing provider account, reviews what the app requests, and returns to the app without creating a separate Unbound account.
+
+The current implementation can connect to Google, GitHub, and Discord when those providers are configured. Provider availability can change during the alpha.
+
+For apps, Unbound implements an authorization-code flow with OIDC-style discovery, signed JWT bearer tokens, and pairwise identities scoped to each app origin. The official `unbound-auth` client is the recommended integration path and is available as an npm package or a global browser bundle.
+
+## Choose your path
+
+<Cards>
+  <Card title="Start the quickstart" description="Add sign-in with the npm package or global browser bundle." href="/docs/quickstart" />
+  <Card title="Use Unbound safely" description="Understand the sign-in screen, requested data, and your choices." href="/docs/users" />
+  <Card title="Build with the client" description="Use npm or the browser bundle, choose an integration, and manage sessions." href="/docs/client" />
+  <Card title="Learn the core concepts" description="Explore the flow, stateless design, identity, scopes, and claims." href="/docs/concepts" />
+</Cards>
+
+## What “stateless” means
+
+Unbound keeps its browser login state and user data in a local encrypted, integrity-protected cookie instead of a normal server-side user-profile session database. Authorization codes carry an encrypted payload, and issued JWTs are self-contained and signed.
+
+<Callout title="Privacy boundary" type="info">
+  “Stateless” describes the identity and session architecture. Unbound still processes data needed to complete sign-in. Temporary technical records or logs may exist for flow state, replay mitigation, flash messages, security, debugging, and legal needs. A deployment can also record authorization-code use in Cloudflare KV.
+</Callout>
+
+Learn more in [Stateless design](/docs/concepts/stateless-design).
+
+## How sign-in works
+
+1. The user starts sign-in in an app.
+2. The app sends the browser to Unbound with a callback URL and requested scopes.
+3. Unbound asks the user to sign in through an available provider.
+4. The user reviews the app origin and requested data, then approves or denies the request.
+5. After approval, Unbound returns a short-lived authorization code to the app callback.
+6. The app exchanges the code for a short-lived signed JWT bearer token.
+7. The app validates the identity and creates its own session and access rules.
+
+See [How Unbound works](/docs/concepts/how-it-works) for the actors and trust boundaries in the complete flow.
+
+## Privacy boundaries
+
+Unbound derives a different pairwise user ID for each app origin. This reduces direct correlation between apps through a shared Unbound identifier, but it does not make tracking or correlation impossible. An app or provider can still process data under its own terms and privacy practices.
+
+Users decide whether to approve requested scopes. After approval, the app is responsible for how it stores and uses the claims it receives. Unbound does not decide app permissions, roles, moderation, or account access.
+
+Read [Privacy and control](/docs/users/privacy-and-control) for the user-facing model.
+
+<Callout title="Alpha status" type="warning">
+  Unbound is alpha software. APIs and behavior may change, compatibility coverage is limited, and production use requires independent security, privacy, and operational review.
+</Callout>

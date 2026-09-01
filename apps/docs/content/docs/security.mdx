@@ -1,0 +1,138 @@
+---
+title: Security and privacy
+description: Unbound trust boundaries, app security requirements, implemented protections, and current limitations.
+---
+
+Unbound brokers authentication between an app and an external provider, then issues a short-lived signed JWT for the app. Security still depends on the provider, Unbound, the browser, and the app each enforcing the controls they own.
+
+<Callout title="Current limitation" type="warning">
+  Unbound provides OIDC-style discovery and an authorization-code flow. This page is not a certification statement and does not claim full OAuth 2.0 or OpenID Connect compliance.
+</Callout>
+
+## Trust boundaries
+
+| Actor | Security responsibility |
+| --- | --- |
+| Sign-in provider | Authenticate the upstream account and return provider identity data |
+| Unbound | Protect its login session, bind authorization to the app origin and redirect URI, collect consent, and issue signed tokens |
+| App | Protect state and PKCE material, validate tokens, create its own session, authorize actions, and secure its origin |
+| Browser/user | Keep the device and provider session safe, review the app origin and scopes, and approve or deny consent |
+
+Authentication establishes an identity signal. It does not decide whether a user may access an app feature, prove that an app is trustworthy, or replace app-specific abuse, account, and authorization controls.
+
+## Protections in the current flow
+
+| Mechanism | Current behavior |
+| --- | --- |
+| State | The official client generates a random 32-character value; browser callback mode compares it exactly |
+| PKCE | The official client generates a random 64-character verifier and S256 challenge |
+| App identity | `client_id` is bound to an HTTPS origin using `origin:<origin>` |
+| Redirect binding | Authorization requires an exact origin match; token exchange requires the exact redirect URI string |
+| Unbound login cookie | Encrypted/sealed, `HttpOnly`, `Secure`, `SameSite=Lax`, path `/`; default lifetime 7 days |
+| Pairwise subject | A distinct app-scoped Unbound ID is derived per client origin |
+| Tokens | Signed JWTs with `iss`, `sub`, `aud`, `iat`, `exp`, and `jti`; default lifetime 15 minutes |
+| Code lifetime | Encrypted authorization code; default lifetime 120 seconds |
+| Replay records | Optional KV record of code use; default record lifetime 600 seconds |
+| Consent | User-facing approval before a downstream code is issued |
+
+The server treats downstream `state` and PKCE as optional. Apps should use both regardless. A PKCE method without a challenge is currently accepted, and the server's challenge/verifier validation is less restrictive than a full protocol profile.
+
+`prompt=consent` and `prompt=login` are advertised in discovery, but `prompt` is not parsed or implemented by `/authorize`.
+
+## App requirements
+
+### Validate tokens before trusting identity
+
+Verify JWTs at a trusted server-side boundary before creating an app session or making authorization decisions. At minimum:
+
+1. Verify the signature using a trusted Unbound key.
+2. Restrict the accepted algorithm and require an expected `kid`.
+3. Require the exact issuer.
+4. Require the audience to equal your `origin:` client ID.
+5. Require a valid expiration and apply an intentional clock-skew policy.
+6. Require a non-empty pairwise `sub`.
+7. Validate the type and presence of every claim your app uses.
+8. Compare `nonce` when your integration sends one.
+
+The TypeScript client's browser-default token processing only decodes the JWT and checks basic shape and expiration. It does **not** verify the signature, issuer, audience, algorithm, key ID, nonce, token type, or authorization server. `getSession({ verify: true })` checks identity through `/userinfo`; it does not perform local JWKS verification.
+
+`/userinfo` verifies the signature and relevant time constraints but does not supply an expected issuer or audience to its verifier. A successful response is not a replacement for app-side issuer and audience validation.
+
+See [Tokens and claims](/docs/reference/tokens-and-claims) for the complete checklist.
+
+### Protect authorization state
+
+- Store `state` and the PKCE verifier as short-lived, confidential pending-auth data.
+- Compare returned state exactly and consume it once.
+- Never log codes, state, verifiers, tokens, cookies, or private keys.
+- Do not start concurrent flows in the same default client storage namespace; a new start overwrites the stored state/verifier pair.
+- On a server, validate and consume state before calling `finishSignIn({ code, verifier })`.
+- Restart expired, used, malformed, or mismatched flows instead of reusing a callback.
+
+Denial redirects currently include `error=access_denied` without the original state. Check for the callback error before attempting normal completion, then return the user to a neutral signed-out state.
+
+### Create an app-owned session
+
+After validation, create a session controlled by your app. Prefer a narrowly scoped, `HttpOnly`, `Secure`, appropriately `SameSite` cookie where practical. Apply your own session lifetime, rotation, CSRF protection, reauthentication policy, and logout behavior.
+
+The Unbound access token and ID token are currently the same JWT when `openid` is requested. Do not assume they have independent contents or lifecycles.
+
+### Request and expose less data
+
+Request only the scopes you need:
+
+- `openid` includes `id_token` in the exchange response;
+- `profile` permits `name` and `picture`;
+- `email` permits `email` and optional `email_verified`.
+
+All profile claims are optional. In particular, an upstream `email_verified=false` can currently become an omitted claim. Never infer verification from the presence of an email address.
+
+### Secure browser integrations
+
+The default browser adapter stores the token in `localStorage`, making it readable by scripts on the app origin. Prevent XSS with careful output encoding, dependency control, a suitable Content Security Policy, and minimal third-party script access. For higher-risk applications, exchange and retain credentials on a backend and expose only an app session to the browser.
+
+Use distinct adapter prefixes for independent clients on one origin. Clean successful callback URLs so one-time code and state values do not remain in browser history or copied links.
+
+## Cross-origin requests
+
+Direct browser JavaScript exchanges require the authorization server or external infrastructure to permit cross-origin requests to `/token` and `/userinfo`. The server source does not provide CORS middleware or explicit `Access-Control-Allow-*` handling.
+
+<Callout title="Browser limitation" type="warning">
+  Do not assume a cross-origin browser exchange is available. If the deployed service does not provide appropriate CORS, use a same-origin proxy or perform token exchange and validation on your backend.
+</Callout>
+
+CORS controls browser access; it does not authenticate a caller or make bearer tokens safe to expose. Keep allowed origins and methods narrow wherever CORS is supplied.
+
+## Current limitations
+
+### Authorization-code replay
+
+Authorization codes are encrypted self-contained payloads, not database identifiers. The current representation must not be described as signed, sealed, independently authenticated, or tamper-proof.
+
+One-time-use enforcement is optional. When KV is unavailable, the same code can be exchanged repeatedly until its expiration. When KV is available, the server performs a separate read followed by a write rather than an atomic consume, so concurrent exchanges can race. The record is also written before JWT signing, which can leave a code marked used if signing later fails.
+
+Apps must use PKCE, keep code lifetimes short, and treat any code as one-time even though server enforcement has these limits.
+
+### Token lifecycle
+
+There are no refresh-token, revocation, introspection, or downstream end-session endpoints. Local app logout, Unbound logout, and provider logout do not invalidate an already issued JWT. It can remain usable until expiration unless the app applies a stricter session policy.
+
+### Signing-key publication
+
+JWKS currently publishes one active public key. The server source has no historical rotation set or explicit cache policy. Replacing that key can immediately disrupt verification of tokens signed by the previous key.
+
+### Server-side enforcement boundaries
+
+The server source does not provide explicit middleware for CORS, security headers, rate limiting, or abuse throttling. Deployment infrastructure may add controls, but apps should not assume they exist from this implementation alone.
+
+Unexpected protocol failures can return HTML, including a generic error page or setup page, rather than OAuth-style JSON. Clients must check status and content type and avoid logging raw bodies.
+
+## Privacy boundaries
+
+In normal operation, Unbound keeps its login session in an encrypted browser cookie rather than a server-side user-profile session database. Authorization codes and JWTs are self-contained. This does not mean the service processes no personal data or never writes technical records: provider data is processed during sign-in, temporary logs may exist, and optional KV records can track authorization-code use.
+
+The pairwise `sub` reduces direct cross-app correlation through the Unbound identifier by changing with app origin. It does not guarantee anonymity or prevent correlation through email, profile data, browser signals, the provider, the destination app, or other shared identifiers.
+
+Changing the Unbound session secret changes pairwise subjects and invalidates outstanding Unbound login sessions and authorization codes. The raw provider subject and provider name are not included in downstream tokens.
+
+Use the [Endpoint reference](/docs/reference/endpoints), [TypeScript client API](/docs/reference/client-api), and [Error reference](/docs/reference/errors) during implementation.

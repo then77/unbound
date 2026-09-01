@@ -1,0 +1,153 @@
+---
+title: Sessions and events
+description: Read, validate, replace, and observe TypeScript client sessions.
+---
+
+After a successful callback, the client exposes identity and token lifetime through a `Session`:
+
+```ts
+interface Session {
+  user?: {
+    id: string;
+    name?: string;
+    picture?: string;
+    email?: string;
+    email_verified?: boolean;
+  };
+  access_token: string;
+  expires_at?: number;
+  expires_in?: number;
+}
+```
+
+`expires_at` is Unix time in seconds. `expires_in` is recalculated as remaining seconds when the session is read.
+
+<Callout title="Current limitation" type="info">
+  Despite its name, `auth.user` is `Session | null`, not the nested user profile. Read the profile from `auth.user?.user`.
+</Callout>
+
+## Initialize the client
+
+`initialize()` loads state, verifier, and token from storage, then sets `ready` and emits the `ready` event. `ready` means initialization completed; it does not mean a user is signed in.
+
+Browser clients begin initialization during construction. You can await completion before reading the synchronous getters:
+
+```ts
+try {
+  await auth.initialize();
+
+  const session = auth.user;
+  renderAccount(session?.user ?? null);
+} catch (error) {
+  showInitializationError(error);
+}
+```
+
+Unlike normal auth operations, `initialize()` returns `Promise<void>` rather than `{ data, error }` and can reject on initialization failures.
+
+## Read a session
+
+```ts
+const { data: session, error } = await auth.getSession();
+
+if (error) {
+  showSessionError(error);
+} else if (session) {
+  renderAccount(session.user ?? null);
+} else {
+  renderSignedOut();
+}
+```
+
+Without an in-memory session, `getSession()` returns `data: null`. If an existing token is invalid, the client clears its in-memory session, but a stale stored token can remain.
+
+### Local decoding and remote checking
+
+| Call | Browser default | Server default |
+| --- | --- | --- |
+| `getSession()` | Decode only | Check through `/userinfo` |
+| `getSession({ verify: true })` | Check through `/userinfo` | Check through `/userinfo` |
+| `getSession({ verify: false })` | Decode only | Decode only |
+
+Decode-only mode checks JWT shape, parses selected claims, and rejects an expired numeric `exp`. It does not authenticate the signature, issuer, audience, algorithm, key ID, nonce, or token source.
+
+`verify: true` sends the bearer token to `/userinfo` and uses the returned profile. It does not perform local JWK verification.
+
+## Set a session
+
+Use `setSession()` to import an access token from a trusted handoff or custom persistence layer. The client processes the token before storing it:
+
+```ts
+export async function importSession(accessToken: string) {
+  const { data: session, error } = await auth.setSession({
+    access_token: accessToken,
+    verify: true,
+  });
+
+  if (error) {
+    showSessionError(error);
+    return;
+  }
+
+  renderAccount(session.user ?? null);
+}
+```
+
+An empty token returns `MISSING_TOKEN`. Failed processing does not replace the stored token and can clear the current in-memory session.
+
+## Expiration
+
+When a token contains a numeric `exp`, browser clients schedule token removal and emit a logout event at expiration. Server clients do not schedule a timer. A token without a numeric `exp` has no client expiration timer and may remain stored until removed.
+
+The package has no refresh-token or silent-renewal flow. Restart sign-in when a new token is required.
+
+## Observe events
+
+The client emits three synchronous events:
+
+| Event | Payload | Meaning |
+| --- | --- | --- |
+| `ready` | Optional `session` (`Session` or `null`) | Initialization completed |
+| `auth` | A required `session` (`Session`) | A session was accepted |
+| `logout` | A `reason`: `user`, `expired`, or `revoked` | The local session ended |
+
+Keep the same callback reference when removing a listener. `on()` returns `void`; it does not return an unsubscribe function.
+
+```ts
+import type { Session } from "unbound-auth";
+
+const handleAuth = ({ session }: { session: Session }) => {
+  renderAccount(session.user ?? null);
+};
+
+const handleLogout = ({ reason }: {
+  reason: "user" | "expired" | "revoked";
+}) => {
+  renderSignedOutReason(reason);
+};
+
+auth.on("auth", handleAuth);
+auth.on("logout", handleLogout);
+
+// During cleanup:
+auth.off("auth", handleAuth);
+auth.off("logout", handleLogout);
+```
+
+Listener exceptions are not isolated. Keep callbacks small and catch errors inside them if event handling can fail.
+
+## Log out locally
+
+```ts
+const { data, error } = await auth.logout();
+
+if (error) {
+  showLogoutError(error);
+} else {
+  renderSignedOut();
+}
+```
+
+The successful `data` value is `null`. Logout removes only the token for an active in-memory session; it does not clear pending state/verifier, revoke the token, call an end-session endpoint, or log out from Unbound or an upstream provider. If memory has no session, logout is a no-op and may leave a stale stored token.
+
+Review [storage adapters](/docs/client/storage) for persistence details and [client errors](/docs/client/errors) for invalid or expired token handling.

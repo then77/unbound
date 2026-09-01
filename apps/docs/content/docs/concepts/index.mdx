@@ -1,0 +1,27 @@
+---
+title: Core concepts
+description: Learn the actors, data boundaries, identity model, and vocabulary behind an Unbound sign-in.
+---
+
+Unbound connects an app to an external sign-in provider through a focused authorization-code flow. These concepts explain why each redirect, scope, and validation step exists.
+
+<Cards>
+  <Card title="How Unbound works" description="Follow the complete flow across the browser, app, Unbound, and provider." href="/docs/concepts/how-it-works" />
+  <Card title="Stateless design" description="See where browser state, authorization codes, tokens, and limited records live." href="/docs/concepts/stateless-design" />
+  <Card title="Identity, scopes, and claims" description="Connect user approval to the pairwise identity and fields an app receives." href="/docs/concepts/identity-scopes-and-claims" />
+  <Card title="Security and privacy" description="Review trust boundaries and the responsibilities that remain with the app." href="/docs/security" />
+</Cards>
+
+## Glossary
+
+| Term | Meaning |
+|---|---|
+| **App** | The application requesting authentication and approved identity data. |
+| **App origin** | The HTTPS origin used to identify the public client, bind the callback, and scope the pairwise identity. |
+| **Provider** | An external sign-in provider—currently Google, GitHub, or Discord when configured—that authenticates the user to Unbound. |
+| **Authorization code** | A short-lived encrypted value returned to the app callback and exchanged for a token. |
+| **Token** | A short-lived signed JWT bearer token issued after a successful code exchange. |
+| **Scope** | A requested category of access: currently `openid`, `profile`, or `email`. |
+| **Pairwise subject** | The app-scoped Unbound user ID in the token’s `sub` claim. Different app origins receive different values. |
+
+Unbound exposes OIDC-style discovery, JWKS, authorization, token, and userinfo endpoints. This describes the current implementation, not full OpenID Connect certification or generic client compatibility.
