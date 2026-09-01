@@ -1,0 +1,71 @@
+---
+title: Identity, scopes, and claims
+description: Understand how an approved scope request becomes an app-scoped identity and token claims.
+---
+
+Unbound gives an app a pairwise identity scoped to its origin and includes only claims allowed by the approved scopes and available from the provider.
+
+## Pairwise identity by app origin
+
+The token’s `sub` claim is the user’s app-scoped Unbound ID. It is derived from the upstream provider subject, the destination app origin, and the Unbound deployment secret.
+
+The same underlying identity receives a different `sub` for each app origin. This reduces direct cross-app correlation through a shared Unbound identifier, but it does not guarantee anonymity or prevent correlation through other data.
+
+Changing the Unbound deployment secret changes pairwise IDs, so apps should not assume those IDs survive a server secret rotation.
+
+## Current scopes
+
+| Scope | Effect |
+|---|---|
+| `openid` | Causes `id_token` to be included in the token response. In the current implementation, it is the same signed JWT as the access token. |
+| `profile` | Allows `name` and `picture` claims when those values are available. |
+| `email` | Allows `email` and potentially `email_verified` when those values are available. |
+
+Scopes are explicit categories, not a guarantee that every corresponding field exists. Request only what the app needs, and handle optional fields as absent.
+
+## Always-present JWT claims
+
+The signing path sets these claims on issued tokens:
+
+| Claim | Meaning |
+|---|---|
+| `iss` | The Unbound issuer origin at token exchange. |
+| `sub` | The pairwise, app-scoped Unbound user ID. |
+| `aud` | The public client ID in `origin:<app origin>` form. |
+| `iat` | Token issue time as Unix seconds. |
+| `exp` | Token expiration as Unix seconds. |
+| `jti` | A random identifier for this token. |
+
+Apps must validate the expected `iss` and `aud`; reading these fields is not itself validation.
+
+## Conditional claims
+
+| Claim | Included when |
+|---|---|
+| `name` | `profile` was approved and the provider supplied a usable value. |
+| `picture` | `profile` was approved and the provider supplied a usable value. |
+| `email` | `email` was approved and the provider supplied a usable value. |
+| `email_verified` | `email` was approved and a value survives the current code and token processing. It is optional. |
+| `nonce` | A nonce was supplied in the authorization request. |
+
+<Callout title="Current limitation" type="info">
+  An upstream `email_verified` value of `false` can currently become an omitted downstream claim. Treat `email_verified` as optional; do not interpret absence as verified or unverified without an app policy.
+</Callout>
+
+The downstream token does not include the provider name or raw provider user ID. The app receives the pairwise Unbound subject instead.
+
+## Identity is not authorization
+
+A valid token tells the app which pairwise identity was authenticated and which approved claims were issued. The app still owns:
+
+- account linking and lifecycle decisions;
+- roles, permissions, and feature access;
+- moderation and acceptable-use enforcement;
+- storage and protection of received claims; and
+- its own session creation and logout behavior.
+
+<Callout title="Security requirement" type="warning">
+  Before trusting identity, validate the JWT signature, allowed algorithm and key, issuer, audience, expiration, and every claim your decision depends on. Browser-default decoding does not perform these checks.
+</Callout>
+
+Return to [How Unbound works](/docs/concepts/how-it-works) for the flow that produces these claims, or continue to the [token reference](/docs/reference/tokens-and-claims) for the exact current token contract.

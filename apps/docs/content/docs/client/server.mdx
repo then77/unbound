@@ -1,0 +1,110 @@
+---
+title: Server integration
+description: Build a framework-neutral server authorization flow with explicit state validation.
+---
+
+A server integration owns HTTP redirects, pending authorization state, and the application's signed-in session. The client creates and exchanges Unbound protocol values, but it does not validate callback state for server calls.
+
+<Callout title="Security requirement" type="warning">
+  Persist state and verifier in server-side or integrity-protected application session storage, bind them to the initiating browser, consume them once, and compare returned state exactly before exchanging a code.
+</Callout>
+
+## Create request clients
+
+Use `server: true` and an absolute HTTPS callback URI. Create a fresh client for each request that performs auth work so in-memory session and pending-flow state cannot leak between requests.
+
+```ts
+import { createUnboundClient } from "unbound-auth";
+
+function createRequestAuth() {
+  return createUnboundClient({
+    server: true,
+    redirect_uri: "https://app.example.com/auth/callback",
+    scopes: ["openid", "profile", "email"],
+  });
+}
+```
+
+The following examples use `savePendingAuth`, `takePendingAuth`, `getAppSessionId`, and `createAppSession` as application-owned placeholders. They are not exports from `unbound-auth`.
+
+## Start route
+
+The start route creates protocol state, saves the returned state and verifier, then returns an HTTP redirect:
+
+```ts title="start-route.ts"
+export async function startRoute(request: Request): Promise<Response> {
+  const auth = createRequestAuth();
+  const appSessionId = await getAppSessionId(request);
+  const { data, error } = await auth.startSignIn();
+
+  if (error) {
+    return new Response("Unable to start sign-in", { status: 500 });
+  }
+
+  await savePendingAuth(appSessionId, {
+    state: data.state,
+    verifier: data.verifier,
+  });
+
+  return Response.redirect(data.url, 302);
+}
+```
+
+Treat state and verifier as sensitive, temporary flow values. Do not log them or return them to unrelated clients.
+
+## Callback route
+
+The callback must require code and state, atomically retrieve and consume the pending values, and compare state before calling `finishSignIn()`:
+
+```ts title="callback-route.ts"
+export async function callbackRoute(request: Request): Promise<Response> {
+  const callbackUrl = new URL(request.url);
+  const code = callbackUrl.searchParams.get("code");
+  const returnedState = callbackUrl.searchParams.get("state");
+  const appSessionId = await getAppSessionId(request);
+  const pending = await takePendingAuth(appSessionId);
+
+  if (!code || !returnedState || !pending) {
+    return new Response("Invalid authentication callback", { status: 400 });
+  }
+
+  if (returnedState !== pending.state) {
+    return new Response("Invalid authentication callback", { status: 400 });
+  }
+
+  const auth = createRequestAuth();
+  const { data: unboundSession, error } = await auth.finishSignIn({
+    code,
+    verifier: pending.verifier,
+  });
+
+  if (error) {
+    return new Response("Unable to complete sign-in", { status: 401 });
+  }
+
+  await createAppSession(request, unboundSession);
+  return Response.redirect("https://app.example.com/dashboard", 302);
+}
+```
+
+`takePendingAuth` should consume the pending record even when validation fails, preventing the same application state from being retried. A callback may contain `error=access_denied` rather than a code; handle that as a denied or invalid callback and offer a fresh sign-in attempt.
+
+With `server: true`, `finishSignIn()` checks the token through `/userinfo` by default. This endpoint verifies the token signature and time constraints, but the current server does not enforce expected issuer or audience in that check. Apply any additional trust policy your application requires before creating its session.
+
+## Create your own application session
+
+`finishSignIn()` returns an Unbound `Session`. Use the verified result to create a separate application session with your own lifetime, rotation, and cookie policy. Do not expose the access token to browser JavaScript unless your architecture requires it and you have assessed the risk.
+
+The client does not provide refresh tokens. When the Unbound token expires, restart the authorization flow as needed.
+
+## Cookie adapter
+
+The cookie adapter can persist client session data in `HttpOnly` cookies and creates a client scoped to the current request/response. See [storage adapters](/docs/client/storage#cookie-storage) for middleware and direct modes.
+
+Keep the base client passed to cookie middleware uninitialized and free of user or request state. Never cache or reuse the cloned request client across requests.
+
+## Logout boundary
+
+Client `logout()` is local only: it removes the active token from that client storage and emits a local event. It does not revoke the JWT, end the user's Unbound login session, or sign the user out of an upstream provider. Your application must also destroy its own session when the user signs out.
+
+For the client session shape, see [sessions and events](/docs/client/sessions). For retry decisions, see [handle client errors](/docs/client/errors).

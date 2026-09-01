@@ -1,0 +1,139 @@
+---
+title: Error reference
+description: Protocol and TypeScript client error codes, likely causes, and safe recovery actions.
+---
+
+Use this page as a lookup for handled protocol and client failures. Never include authorization codes, tokens, PKCE verifiers, cookies, private keys, or raw provider responses in logs or user-visible error reports.
+
+## Token endpoint errors
+
+Handled `POST /token` failures use HTTP `400` and an OAuth-style response:
+
+```json
+{
+  "error": "invalid_grant",
+  "code": "EXPIRED_CODE",
+  "error_description": "Authorization code is expired"
+}
+```
+
+Validation errors may omit the project-specific `code`.
+
+| Condition | `error` | `code` | Safe recovery |
+| --- | --- | --- | --- |
+| Missing or invalid form field | `invalid_request` | None | Fix request construction |
+| Wrong `grant_type` | `unsupported_grant_type` | None | Send `authorization_code` |
+| Missing client ID | `invalid_request` | `MISSING_CLIENT_ID` | Send the `origin:` client ID |
+| Code cannot be decrypted/decoded | `invalid_grant` | `INVALID_CODE` | Restart sign-in; do not reuse the callback |
+| Code expired | `invalid_grant` | `EXPIRED_CODE` | Restart sign-in |
+| Client ID mismatch | `invalid_grant` | `INVALID_CLIENT_ID` | Use the callback origin that started the flow |
+| Redirect URI mismatch | `invalid_grant` | `INVALID_REDIRECT_URI` | Send the exact original redirect URI string |
+| Required verifier missing | `invalid_grant` | `MISSING_VERIFIER` | Restore the pending verifier or restart sign-in |
+| Verifier does not match | `invalid_grant` | `INVALID_VERIFIER` | Restart sign-in with the matching stored verifier |
+| Code-use record already exists | `invalid_grant` | `USED_CODE` | Restart sign-in; never retry the same code |
+
+A client ID without `origin:` may receive the hint `Try again with "origin:" prefix`.
+
+## Userinfo errors
+
+`GET /userinfo` returns HTTP `401` for bearer-token failures:
+
+| Condition | Response |
+| --- | --- |
+| Missing or malformed bearer header | `{ "error": "invalid_token", "error_description": "Missing bearer token" }` |
+| Expired token | `{ "error": "invalid_token", "error_description": "Token is expired" }` |
+| Other invalid token | `{ "error": "invalid_token", "error_description": "Invalid token" }` |
+
+Prompt the user to sign in again for expired or invalid tokens. Do not repeatedly retry the same credential.
+
+## Client result errors
+
+Client auth methods normally return:
+
+```ts
+{ data: null, error }
+```
+
+Branch by the exported classes:
+
+```ts
+import {
+  APIUnboundError,
+  AuthUnboundError,
+} from "unbound-auth";
+
+const { data, error } = await auth.finishSignIn();
+
+if (error instanceof AuthUnboundError) {
+  // Use error.code for controlled auth recovery.
+} else if (error instanceof APIUnboundError) {
+  // Use error.code and error.status; keep error.cause private.
+} else if (error) {
+  // Unexpected runtime, storage, listener, or adapter error.
+}
+```
+
+### Authentication codes
+
+| Code | Likely cause | Recovery |
+| --- | --- | --- |
+| `MISSING_REDIRECT_URI` | No resolvable HTTP(S) callback | Configure a browser path or absolute server callback |
+| `MISSING_SCOPES` | No supported scope remains | Request at least one of `openid`, `profile`, or `email` |
+| `MISSING_CODE` | Callback has no code | If denied, handle `error`; otherwise restart sign-in |
+| `MISSING_STATE` | Callback has no state or pending state was lost | Handle denial separately or restart sign-in |
+| `MISSING_VERIFIER` | PKCE verifier was lost or wrong storage/tab used | Restart sign-in in the original tab |
+| `MISSING_CLIENT_ID` | Token request has no client ID | Correct request/client configuration |
+| `INVALID_REDIRECT_URI` | URI is unsupported or differs from the original | Use an HTTP(S) URI and exact original value |
+| `INVALID_CODE` | Malformed, undecryptable, or invalid code | Restart sign-in |
+| `INVALID_STATE` | Returned state differs from stored state | Stop processing and restart sign-in |
+| `INVALID_VERIFIER` | PKCE verification failed | Restart sign-in; do not reuse pending values |
+| `INVALID_CLIENT_ID` | App origin/client ID differs | Use the same callback origin throughout the flow |
+| `EXPIRED_CODE` | Code exceeded its short lifetime | Restart sign-in |
+| `USED_CODE` | Code was already recorded as exchanged | Restart sign-in |
+| `MISSING_TOKEN` | `setSession()` received an empty token | Supply a token only from a trusted exchange |
+| `INVALID_TOKEN` | Token shape, `/userinfo`, or signature check failed | Clear local session state and sign in again |
+| `EXPIRED_TOKEN` | JWT or `/userinfo` reports expiration | Prompt sign-in and create a new app session |
+
+`INVALID_STATE` is declared and can be produced by browser callback validation. It is also recognized if returned by the token API, although the current token endpoint table does not normally emit it.
+
+### API errors
+
+| `APIUnboundError.code` | Meaning | Available context | Recovery |
+| --- | --- | --- | --- |
+| `NETWORK_ERROR` | Fetch, JSON parsing, or unexpected request failure | `cause` | Check connectivity/CORS; retry only idempotent checks |
+| `SERVER_ERROR` | Non-mapped HTTP failure or invalid success response | `status`, sometimes `cause` | Inspect status/content type; retry later or report a sanitized incident |
+| `UNKNOWN` | Declared fallback code | Optional context | Not currently constructed by normal inspected paths |
+
+For `/userinfo`, an HTTP `401` whose description contains `expired` maps to `EXPIRED_TOKEN`; other `401` responses map to `INVALID_TOKEN`. Other non-2xx responses map to `SERVER_ERROR`.
+
+## User denial
+
+A denial returns `error=access_denied` to the callback, but current denial redirects omit `state`. Automatic callback completion only starts when both `code` and `state` exist, and manual `finishSignIn()` can otherwise report `MISSING_STATE` or `MISSING_CODE`.
+
+Inspect the callback's `error` parameter before calling `finishSignIn()`. Treat `access_denied` as a user-controlled cancellation, clear or replace the callback URL, and return to a neutral signed-out state. Do not report it as a security incident.
+
+## HTML and unexpected responses
+
+Not every endpoint failure is structured JSON:
+
+- malformed `/authorize` requests render HTML validation;
+- invalid consent submissions can redirect back to an HTML page;
+- an unconfigured service can render an HTML setup page for protocol routes;
+- unexpected server failures can render a generic HTML retry page;
+- upstream provider failures are presented through generic user-facing UI rather than raw provider errors.
+
+Before parsing JSON, check `response.ok` as appropriate and inspect `Content-Type`. Convert unexpected HTML to a sanitized app error; do not display or log an entire response body by default.
+
+## Retry rules
+
+| Failure category | Recommended action |
+| --- | --- |
+| Invalid app configuration | Fix callback, origin, scope, or endpoint configuration before retrying |
+| State, verifier, code, or denial issue | Discard the callback and restart authorization |
+| Expired or used code | Always start a new flow |
+| Expired or invalid token | Clear the app session and prompt sign-in |
+| CORS or browser network failure | Use supported CORS infrastructure or a backend/same-origin exchange |
+| Temporary `/userinfo` network failure | Retry with bounded backoff if the app can do so safely |
+| Unexpected HTML/server failure | Show a generic retry message and record sanitized status/metadata |
+
+See [Troubleshooting](/docs/troubleshooting) for symptom-first app guidance and [Endpoint reference](/docs/reference/endpoints) for request requirements.

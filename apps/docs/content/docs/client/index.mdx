@@ -1,0 +1,151 @@
+---
+title: TypeScript client
+description: Add Unbound sign-in to browser and server applications with the unbound-auth package.
+---
+
+The `unbound-auth` package manages authorization URLs, PKCE, callback exchange, sessions, storage, and client events. It supports browser applications and server-side integrations through the same result-first API.
+
+<Callout title="Alpha status" type="warning">
+  The client is in alpha. Pin a version, test upgrades in your integration, and expect APIs or behavior to change before a stable release.
+</Callout>
+
+## Install
+
+Install the npm package:
+
+```bash
+npm install unbound-auth
+```
+
+Import client APIs from the package root and storage adapters from the adapter entry:
+
+```ts
+import { createUnboundClient } from "unbound-auth";
+import {
+  browserStorageAdapter,
+  cookieStorageAdapter,
+} from "unbound-auth/adapters";
+```
+
+## Browser bundle
+
+The browser bundle is available from unpkg and exposes a global `Unbound` object:
+
+```html
+<script src="https://unpkg.com/unbound-auth@latest/dist/unbound.min.js"></script>
+```
+
+`Unbound` contains a pre-created browser client that begins initialization when the bundle loads. It exposes the same client methods and state as `createUnboundClient()`, including `startSignIn()`, `finishSignIn()`, `getSession()`, `setSession()`, `logout()`, `on()`, `off()`, `ready`, `user`, and `config`.
+
+The bundle client uses two additional defaults:
+
+```ts
+{
+  auto_redirect: true,
+  redirect_to: "/",
+}
+```
+
+You can use the shared global client directly, or create an independent client with `Unbound.create()`:
+
+```html
+<script src="https://unpkg.com/unbound-auth@latest/dist/unbound.min.js"></script>
+<script>
+  const auth = Unbound.create({
+    redirect_uri: "/auth/callback",
+    redirect_to: "/dashboard",
+    scopes: ["openid", "profile", "email"],
+  });
+
+  document.querySelector("#sign-in").addEventListener("click", async () => {
+    const { error } = await auth.startSignIn();
+
+    if (error) {
+      console.error("Unable to start sign-in", error);
+    }
+  });
+</script>
+```
+
+`Unbound.create()` applies the bundle defaults before your options, so the example automatically navigates to Unbound and returns to `/dashboard` after callback completion. Load the same bundle and create the same client configuration on the callback page. Do not also call `finishSignIn()` manually when using this automatic mode.
+
+<Callout title="Pin production versions" type="warning">
+  The `latest` URL is convenient for evaluation, but it can change without an application deployment. Pin a tested package version in production, especially while the client is in alpha.
+</Callout>
+
+## Choose an environment
+
+| Behavior | Browser client | `server: true` client |
+| --- | --- | --- |
+| Redirect URI | Relative or absolute; defaults to `/callback` on the current origin | Must be an absolute HTTP(S) URL; use HTTPS in integrations |
+| Navigation | Can navigate the current page when enabled | Never sends an HTTP redirect for your app |
+| Callback state check | Automatic when `finishSignIn()` reads the browser URL | Your application must validate and consume state |
+| Token handling by default | Decodes JWT payload and checks shape/expiration only | Checks the token through `/userinfo`, then decodes expiration data |
+| Expiration | Schedules a local logout timer when `exp` exists | No timer |
+| Initialization | Starts at construction | Starts lazily on the first operation |
+
+<Cards>
+  <Card title="Browser integration" description="Choose a manual or automatic redirect flow." href="/docs/client/browser" />
+  <Card title="Server integration" description="Validate state and create an application session." href="/docs/client/server" />
+  <Card title="Sessions and events" description="Read session state and observe lifecycle changes." href="/docs/client/sessions" />
+  <Card title="Storage adapters" description="Choose browser storage, cookies, or a custom adapter." href="/docs/client/storage" />
+</Cards>
+
+## Create a client
+
+```ts
+import { createUnboundClient } from "unbound-auth";
+
+const auth = createUnboundClient({
+  redirect_uri: "/auth/callback",
+  scopes: ["openid", "profile", "email"],
+});
+```
+
+The package client defaults are:
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `auth_url` | `https://unbound.rlzy.me` | Authorization server base URL |
+| `scopes` | `['profile', 'email']` | Requested identity scopes |
+| `server` | `false` | Enables server behavior when `true` |
+| `auto_redirect` | `false` | Navigates automatically during browser start when enabled |
+| `redirect_uri` | Browser origin plus `/callback` | Authorization callback |
+| `redirect_to` | Not set | Destination after browser callback completion |
+| `storage` | Browser storage adapter | Persists token and pending-flow values |
+| `fetcher` | Global `fetch` | Performs token and `/userinfo` requests |
+
+The standard endpoint paths are `/authorize`, `/token`, and `/userinfo`. Advanced endpoint overrides can be relative to `auth_url` or absolute; treat them as security-sensitive because code or token data can be sent to the configured origin.
+
+Request `openid` explicitly when your app needs it. It is supported but is not included in the default scopes.
+
+## Handle results
+
+Expected operational failures are returned instead of thrown. Always await the operation and handle both fields:
+
+```ts
+const { data: session, error } = await auth.getSession();
+
+if (error) {
+  showSessionError(error);
+} else if (session) {
+  showSignedInView(session.user);
+} else {
+  showSignedOutView();
+}
+```
+
+A successful result has `data` and `error: null`; a failed result has `data: null` and an error. `initialize()` is the exception: it returns `Promise<void>` and can reject if initialization itself fails.
+
+## Client lifecycle
+
+1. **Initialize** — load pending flow data and any stored token.
+2. **Start** — call and await `startSignIn()`, then send the browser to the returned authorization URL.
+3. **Return** — the authorization server redirects to the callback with a code and, on success, state.
+4. **Finish** — call and await `finishSignIn()` on the callback, or let a separately configured automatic browser flow do it.
+5. **Use the session** — read `auth.user` or await `getSession()`.
+6. **Log out locally** — await `logout()` to remove the active local token.
+
+Start and callback are separate steps separated by browser navigation. Never call `finishSignIn()` immediately after `startSignIn()`.
+
+Continue with the [browser flow](/docs/client/browser) or the [server flow](/docs/client/server). For exact state after sign-in, see [sessions and events](/docs/client/sessions).

@@ -1,0 +1,9 @@
+{
+  "title": "Core concepts",
+  "pages": [
+    "index",
+    "how-it-works",
+    "stateless-design",
+    "identity-scopes-and-claims"
+  ]
+}

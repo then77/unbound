@@ -1,0 +1,122 @@
+---
+title: Tokens and claims
+description: The current Unbound JWT response, headers, claims, lifetime, key publication, and validation requirements.
+---
+
+Unbound issues a short-lived signed JWT after a successful authorization-code exchange. Apps must validate the token before using identity claims or creating an application session.
+
+<Callout title="Security requirement" type="warning">
+  Decoding a JWT is not verification. Do not use the TypeScript client's browser-default decode-only result as an authorization boundary.
+</Callout>
+
+## Token response
+
+A successful `POST /token` response has this shape:
+
+```json
+{
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "access_token": "<signed-jwt>",
+  "id_token": "<same-signed-jwt>"
+}
+```
+
+| Field | Behavior |
+| --- | --- |
+| `token_type` | Always `Bearer` |
+| `expires_in` | Token lifetime in seconds; default `900` |
+| `access_token` | Always present |
+| `id_token` | Present only when `openid` was requested |
+
+When `id_token` is present, it is currently the exact same JWT string as `access_token`. No refresh token is issued, and no revocation or introspection endpoint is available.
+
+## Protected header
+
+| Header | Behavior |
+| --- | --- |
+| `alg` | Derived from the configured private JWK |
+| `kid` | The configured private JWK's key ID |
+| `typ` | Not set |
+
+Accept only the algorithm and key you expect. Do not select an arbitrary verification algorithm solely from the token header.
+
+## Claims
+
+| Claim | Type | Presence and source |
+| --- | --- | --- |
+| `iss` | string | Always present; incoming request origin at `/token` |
+| `sub` | string | Always present; pairwise/app-scoped Unbound ID |
+| `aud` | string | Always present; client ID such as `origin:https://app.example.com` |
+| `iat` | number | Always present; issue time as Unix seconds |
+| `exp` | number | Always present; expiration as Unix seconds |
+| `jti` | string | Always present; random 16-character identifier |
+| `name` | string | Present when `profile` was requested and a value exists |
+| `picture` | string | Present when `profile` was requested and a value exists |
+| `email` | string | Present when `email` was requested and a value exists |
+| `email_verified` | boolean | Optional when `email` was requested; a false upstream value may be omitted |
+| `nonce` | string | Present when supplied in the authorization request |
+
+The upstream provider name and raw provider subject are not included. `sub` is derived for the app origin, so the same upstream identity normally receives a different downstream subject at a different app origin.
+
+`email_verified` must be treated as optional. Current authorization-code serialization does not preserve an explicit upstream `false`; the claim can be absent instead.
+
+## Scopes and token data
+
+| Scope | Effect |
+| --- | --- |
+| `openid` | Includes `id_token` in the token response |
+| `profile` | Allows `name` and `picture` when available |
+| `email` | Allows `email` and optional `email_verified` when available |
+
+Any non-empty combination of supported scopes can be requested. Request only the data your app needs, and handle optional claims as absent.
+
+## Lifetime
+
+The default JWT lifetime is **900 seconds (15 minutes)**. The response's `expires_in` reflects the configured lifetime. A correctly signed bearer token can remain accepted until `exp` even after local app logout, Unbound logout, or provider logout because the server has no revocation store.
+
+Authorization codes have a separate default lifetime of **120 seconds**. They are encrypted payloads bound to the exact redirect URI and, when used, the PKCE challenge. Do not describe authorization codes as signed, sealed, authenticated, or tamper-proof.
+
+## Validate tokens
+
+Before creating an app session or trusting claims, validate all applicable properties:
+
+1. Verify the JWT signature with a trusted key from the configured Unbound issuer.
+2. Restrict accepted algorithms and confirm the `kid` selects an expected key.
+3. Require the exact expected `iss` value.
+4. Require `aud` to equal your client ID, for example `origin:https://app.example.com`.
+5. Require a valid, unexpired `exp` and apply an appropriate clock-skew policy.
+6. Check `iat` and other time-based policy required by your app.
+7. Require a non-empty `sub` and validate the types of claims you consume.
+8. If your flow uses `nonce`, compare it with the value stored for that authorization attempt.
+9. Apply your own account, session, and authorization rules after token validation.
+
+Do not accept a token merely because it decodes, contains expected-looking profile fields, or succeeds at `/userinfo`. `/userinfo` verifies signature and time constraints but does not itself enforce an expected issuer or audience.
+
+## JWKS behavior
+
+Fetch the current public key from:
+
+```text
+/.well-known/jwks.json
+```
+
+The response currently contains one key. The server source does not implement multiple active keys, historical rotation keys, or an explicit cache policy. Apps should:
+
+- cache keys conservatively according to their own policy;
+- refresh the JWKS when an expected `kid` is not found;
+- fail closed if the key, algorithm, issuer, or audience is unexpected;
+- account for token validation disruption if the sole published key is replaced.
+
+## Bearer-token handling
+
+Treat access and ID tokens as credentials:
+
+- send them only over HTTPS;
+- do not put them in URLs;
+- do not log them or include them in client-visible error reports;
+- limit exposure to third-party scripts;
+- prefer server-managed, `HttpOnly` application sessions where practical;
+- keep application sessions no longer than your risk model permits.
+
+The default browser adapter stores the token in `localStorage`, where scripts running on the app origin can read it. See [Security and privacy](/docs/security) and the [storage guide](/docs/client/storage) before choosing a production storage model.

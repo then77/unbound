@@ -1,0 +1,171 @@
+---
+title: Storage adapters
+description: Choose browser, cookie, or custom persistence for client tokens and authorization state.
+---
+
+Storage adapters persist three client values:
+
+| Key | Purpose | Sensitivity |
+| --- | --- | --- |
+| `token` | Current access token | Bearer credential |
+| `verifier` | PKCE verifier for the pending flow | Temporary secret |
+| `state` | Callback correlation value | Temporary security value |
+
+## Adapter contract
+
+```ts
+import type {
+  StorageAdapter,
+  StorageAdapterKey,
+} from "unbound-auth";
+
+interface StorageAdapter {
+  get(key: StorageAdapterKey): Promise<string | null>;
+  set(key: StorageAdapterKey, value: string): Promise<void>;
+  remove(key: StorageAdapterKey): Promise<void>;
+  query?(
+    keys: StorageAdapterKey[],
+  ): Promise<Partial<Record<StorageAdapterKey, string | null>>>;
+  mutate?(
+    values: Partial<Record<StorageAdapterKey, string | null>>,
+  ): Promise<void>;
+}
+```
+
+The client prefers optional batch methods when available. In `mutate`, `null` means delete. A custom adapter should preserve exact strings, reject failed operations, and make batch behavior equivalent to individual calls.
+
+## Browser storage
+
+The default browser adapter splits persistent session data from tab-scoped authorization state:
+
+| Key | Default location | Default storage key |
+| --- | --- | --- |
+| `token` | `localStorage` | `unbound_token` |
+| `verifier` | `sessionStorage` | `unbound_verifier` |
+| `state` | `sessionStorage` | `unbound_state` |
+
+<Callout title="Security requirement" type="warning">
+  A token in `localStorage` is readable by every script executing on the app origin. An XSS vulnerability can exfiltrate it. Use a strong content-security posture, minimize third-party script access, and consider a server session with `HttpOnly` cookies when that better fits your threat model.
+</Callout>
+
+State and verifier survive navigation in the same tab but are not shared with another tab. The adapter holds one pending pair per prefix, so parallel sign-ins can collide.
+
+Use a custom prefix when multiple independent clients share an origin:
+
+```ts
+import { createUnboundClient } from "unbound-auth";
+import { browserStorageAdapter } from "unbound-auth/adapters";
+
+const auth = createUnboundClient({
+  redirect_uri: "/auth/callback",
+  scopes: ["openid", "profile", "email"],
+  storage: browserStorageAdapter({ prefix: "customer_portal_" }),
+});
+```
+
+Browser storage can fail in restricted contexts or because of quota and security policies. Auth operations report these failures through their `{ data, error }` result.
+
+## Custom adapter
+
+A memory adapter can be useful for short-lived, non-persistent clients:
+
+```ts
+import type {
+  StorageAdapter,
+  StorageAdapterKey,
+} from "unbound-auth";
+
+export function memoryStorageAdapter(): StorageAdapter {
+  const values = new Map<StorageAdapterKey, string>();
+
+  return {
+    async get(key) {
+      return values.get(key) ?? null;
+    },
+    async set(key, value) {
+      values.set(key, value);
+    },
+    async remove(key) {
+      values.delete(key);
+    },
+  };
+}
+```
+
+For server persistence, ensure an adapter is scoped to one request or one application session rather than shared mutable state.
+
+## Cookie storage
+
+Import the cookie adapter from `unbound-auth/adapters`. It supports standard web `Request`/`Response` objects and Node HTTP request/response objects.
+
+### Middleware mode
+
+```ts
+import { createUnboundClient } from "unbound-auth";
+import { cookieStorageAdapter } from "unbound-auth/adapters";
+
+const baseAuth = createUnboundClient({
+  server: true,
+  redirect_uri: "https://app.example.com/auth/callback",
+  scopes: ["openid", "profile", "email"],
+});
+
+const authMiddleware = cookieStorageAdapter(baseAuth);
+```
+
+Call `authMiddleware(req, res, next)` using the middleware contract supported by your server. It assigns a cloned, request-scoped client to `req.auth` and initializes it lazily.
+
+```ts
+async function accountHandler(req: AccountRequest, res: AccountResponse) {
+  const { data: session, error } = await req.auth.getSession();
+
+  if (error) {
+    res.sendStatus(401);
+    return;
+  }
+
+  res.json(session?.user ?? null);
+}
+```
+
+`AccountRequest` and `AccountResponse` above represent your framework's request and response types; they are not package exports.
+
+### Direct mode
+
+When you already have a request and response, create the scoped client directly:
+
+```ts
+const requestAuth = cookieStorageAdapter(baseAuth, request, response);
+const { data: session, error } = await requestAuth.getSession();
+
+if (error) {
+  handleSessionError(error);
+} else {
+  handleSession(session);
+}
+```
+
+A response is required in direct mode because writes append `Set-Cookie` headers.
+
+<Callout title="Security requirement" type="warning">
+  Keep `baseAuth` uninitialized and stateless. Never reuse `req.auth`, `requestAuth`, or any other cookie-backed request client across requests.
+</Callout>
+
+### Cookie defaults
+
+| Setting | Default |
+| --- | --- |
+| Name prefix | `unbound_` |
+| `HttpOnly` | Enabled |
+| `Secure` | Enabled |
+| `SameSite` | `Lax` |
+| Path | `/` |
+| Domain | Not set |
+| Token `Max-Age` | Remaining JWT lifetime, or 900 seconds without a usable `exp` |
+| State/verifier lifetime | Session cookie |
+
+Default `Secure` cookies are not sent over ordinary local HTTP. Override `secure` only for deliberate local development, and keep secure transport in deployed environments. If you set `SameSite=None`, browsers also require `Secure`.
+
+Cookie reads reflect the incoming request, not cookies newly written to the current response. Plan multi-step work accordingly.
+
+Continue with the [server flow](/docs/client/server) or review [local logout behavior](/docs/client/sessions#log-out-locally).
