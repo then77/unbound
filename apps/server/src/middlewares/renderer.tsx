@@ -25,6 +25,14 @@ export const rendererMiddleware = jsxRenderer(
         const appName =
             c.env.APP_NAME && c.env.APP_NAME != "" ? c.env.APP_NAME : "Unbound";
 
+        // Specific env from ci/cd. If you self deploy yourself, you can
+        // safely not use / delete this
+        const gitCommit = (c.env as any).GIT_COMMIT ?? null;
+        const nextVersionEnv = String((c.env as any).NEXT_VERSION ?? "")
+            .trim()
+            .toLowerCase();
+        const nextVersion = ["1", "true", "yes", "on"].includes(nextVersionEnv);
+
         return (
             <Layout
                 appName={appName}
@@ -32,6 +40,8 @@ export const rendererMiddleware = jsxRenderer(
                 session={session}
                 empty={empty}
                 navbarState={navbarState}
+                gitCommit={gitCommit}
+                nextVersion={nextVersion}
             >
                 {children}
             </Layout>
