@@ -1,16 +1,17 @@
+import { docs } from 'collections/server';
 import { loader } from 'fumadocs-core/source';
 import { lucideIconsPlugin } from 'fumadocs-core/source/lucide-icons';
-import { docs } from 'collections/server';
 import { docsContentRoute, docsImageRoute, docsRoute } from './shared';
 
+// See https://fumadocs.dev/docs/headless/source-api for more info
 export const source = loader({
-  source: docs.toFumadocsSource(),
   baseUrl: docsRoute,
+  source: docs.toFumadocsSource(),
   plugins: [lucideIconsPlugin()],
 });
 
-export function getPageImage(slugs: string[]) {
-  const segments = [...slugs, 'image.webp'];
+export function getPageImage(page: (typeof source)['$inferPage']) {
+  const segments = [...page.slugs, 'image.webp'];
 
   return {
     segments,

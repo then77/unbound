@@ -1,0 +1,39 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/black.css";
+@import "fumadocs-ui/css/preset.css";
+
+@theme {
+  --color-fd-primary: hsl(270, 100%, 46%);
+  --color-fd-muted-foreground: hsl(0, 0%, 40%);
+  --color-c-background: hsl(248, 55%, 56%);
+  --color-c-primary: hsl(0, 0%, 98%);
+}
+.dark {
+  --color-fd-primary: hsl(270, 100%, 85%);
+  --color-c-background: hsl(248, 55%, 32%);
+}
+
+@theme static {
+    --color-fd-info: oklch(54.1% 0.144 281.59) !important;
+    --color-fd-idea: var(--color-fd-info);
+}
+
+:root {
+    font-family: "Plus Jakarta Sans";
+}
+
+html {
+    scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+    margin-right: 0px !important;
+    --removed-body-scroll-bar-size: 0px !important;
+}
+
+@layer components {
+    #nd-sidebar {
+        border-inline-end-style: var(--tw-border-style);
+        border-inline-end-width: 1px;
+    }
+}

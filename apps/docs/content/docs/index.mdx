@@ -1,33 +1,53 @@
 ---
-title: Unbound Docs
-description: Unbound is a simple auth
-showAction: false
-sidebar:
-  hidden: true
+title: Introduction
+description: Unbound is a simple, easy-to-use, privacy focused auth broker. 
 ---
 
-Hey there! Fumadocs is a docs framework that works on Waku!
+![Unbound explanation](/images/explanation.webp)
 
-## Heading
+## What's Unbound?
 
-Hello World!
+Unbound is an authentication broker that sits between your app and identity providers. Users sign in with accounts they already have without signup required. Developers get a standard auth flow without building their own provider integrations or managing user credentials.
 
-<Cards>
-  <Card title="Learn more about Waku" href="https://waku.gg" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
-</Cards>
+## Get started
 
-## CodeBlock
+<Callout title="Unbound is still in development." type="warn">
+    While most features are already working, It might still have missing/buggy
+    features. Feel free to use it. If you have ideas to add or
+    find buggy features, make an issue/PR in the GitHub repo!
+</Callout>
 
-```ts
-console.log('Hello World');
-```
+### For users
 
-#### Table
+When an app uses Unbound for authentication:
 
-| Head                            | Description                         |
-| ------------------------------- | ----------------------------------- |
-| `hello`                         | Hello World                         |
-| very **important**              | Hey                                 |
-| _Surprisingly_                  | Fumadocs                            |
-| very long text that looks weird | hello world hello world hello world |
+1. Click the sign-in button in the app
+2. Choose your preferred provider (Google, GitHub, or Discord)
+3. Review what the app is requesting (profile info, email, etc.)
+4. Approve the request to complete sign-in
+
+Your Unbound ID is unique to each app, so different apps cannot track you across services.
+
+### For developers
+
+To add Unbound authentication to your app:
+
+1. **Deploy Unbound** — Self-host the server on Cloudflare Workers, Node.js, or Bun
+2. **Configure providers** — Set up OAuth credentials for the sign-in providers you want to support
+3. **Generate keys** — Create a signing key pair (the setup page helps with this)
+4. **Integrate** — Use any standard OpenID Connect library to connect your app
+5. **Validate tokens** — Verify signatures, issuer, audience, and expiration before trusting tokens
+
+Unbound provides standard discovery endpoints at `/.well-known/openid-configuration`, so most OIDC libraries will configure themselves automatically.
+
+## How it works
+
+1. User visits your app and clicks sign-in
+2. Your app redirects to Unbound's authorization endpoint
+3. User chooses a provider and authenticates with them
+4. User reviews and approves your app's scope request
+5. Unbound issues an authorization code to your app
+6. Your app exchanges the code for a signed identity token
+7. Your app validates the token and creates a session
+
+Unbound acts as a bridge between users, identity providers, and your app, while keeping the flow lightweight and privacy-focused.

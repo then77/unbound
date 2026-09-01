@@ -3,7 +3,8 @@
   "plugins": [
     "typescript",
     "react",
-    "import"
+    "import",
+    "nextjs"
   ],
   "categories": {},
   "env": {

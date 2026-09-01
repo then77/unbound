@@ -1,18 +1,15 @@
-import defaultMdxComponents from "fumadocs-ui/mdx";
-import type { MDXComponents } from "mdx/types";
-import { Card, Cards } from "./ui/card";
+import defaultMdxComponents from 'fumadocs-ui/mdx';
+import type { MDXComponents } from 'mdx/types';
 
 export function getMDXComponents(components?: MDXComponents) {
-    return {
-        ...defaultMdxComponents,
-        Card,
-        Cards,
-        ...components,
-    } satisfies MDXComponents;
+  return {
+    ...defaultMdxComponents,
+    ...components,
+  } satisfies MDXComponents;
 }
 
 export const useMDXComponents = getMDXComponents;
 
 declare global {
-    type MDXProvidedComponents = ReturnType<typeof getMDXComponents>;
+  type MDXProvidedComponents = ReturnType<typeof getMDXComponents>;
 }
