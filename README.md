@@ -1,63 +1,69 @@
-# ![Unbound Logo](https://github.com/user-attachments/assets/abba5844-51ea-4859-a984-1008a3b7d02c) Unbound
+# ![Unbound — Logo](https://github.com/user-attachments/assets/abba5844-51ea-4859-a984-1008a3b7d02c) Unbound
 
-[![Site](https://img.shields.io/badge/Site-Unbound-3929BA)](https://unbound.rlzy.me) [![Docs](https://img.shields.io/badge/Docs-Unbound-1CB058)](https://docs.unbound.rlzy.me) [![Client](https://img.shields.io/npm/v/unbound-auth?label=unbound-auth)](https://www.npmjs.com/package/unbound-auth) ![Status: Alpha](https://img.shields.io/badge/Status-Alpha-red)
+[![Unbound — Site](https://img.shields.io/badge/Site-Unbound-3929BA)](https://unbound.rlzy.me) [![Unbound — Docs](https://img.shields.io/badge/Docs-Unbound-1CB058)](https://docs.unbound.rlzy.me) [![Unbound — Client](https://img.shields.io/npm/v/unbound-auth?label=unbound-auth)](https://www.npmjs.com/package/unbound-auth) ![Unbound — Status: Alpha](https://img.shields.io/badge/Status-Alpha-red)
 
-Unbound is a stateless authentication broker. It lets developers add sign-in without managing user passwords or creating another user-account system, while users can sign in with a provider they already use.
-
-User profile data is kept in an encrypted cookie on the user's device and only passes through Unbound while completing authentication. Each app also receives a different app-scoped user ID.
+Unbound is a simple and stateless auth broker. It help developers to add lightweight sign-in without requiring more setup for auth or rolling your own auth.
 
 📖 [**Read the documentation**](https://docs.unbound.rlzy.me)
 
 > [!WARNING]
-> Unbound is still in alpha. APIs and behavior may change, and production use requires your own security and privacy review.
+> Unbound is still in alpha. Expect APIs and behaviour may change significant on later time. Use on production apps is still discouraged.
 
-## Try it
+## What exactly?
 
-Install the official TypeScript client:
+Unbound is just another auth broker, **but** focused more on:
+- **Simple.** Why bother do setup if you can just plug an auth and it just work? ([look example here](#install-example))
+- **Stateless.** User and auth data are saved **locally** and **encrypted**, in their own browser. Server dont store any of this, only process when user requested, which means: ⬇️
+- **Privacy focused.** On top of that, since we scramble user id on each apps, even with the same user, apps cant just easily recognize you on other apps. (Less user tracking!)
+
+## Lemme try it
+
+Install the official typescript client:
 
 ```sh
-pnpm add unbound-auth
+npm add unbound-auth
+# pnpm add unbound-auth
+# bun add unbound-auth
 ```
 
-Or load the global browser bundle if your app does not use a package build step:
+Or, if youre the native type person, you can put this instead:
 
 ```html
 <script src="https://unpkg.com/unbound-auth@latest/dist/unbound.min.js"></script>
 ```
 
-The bundle exposes a pre-created global `Unbound` client. More details for this available on the [quickstart](https://docs.unbound.rlzy.me/docs/quickstart).
-
-The example below uses the npm package. Create one client shared by your sign-in page and callback page:
+<a name="install-example"></a>
+Make a new unbound client:
 
 ```ts
-// auth.ts
 import { createUnboundClient } from "unbound-auth";
 
 export const auth = createUnboundClient({
   redirect_uri: "/auth/callback",
   scopes: ["openid", "profile", "email"],
 });
+
+// If you use <script> instead, you can skip this step
+// or if you still need configuration:
+// auth = Unbound.create({
+//   redirect_uri: "/auth/callback",
+//   scopes: ["openid", "profile", "email"],
+// });
 ```
 
-Start sign-in from a button or other user action:
+Start a sign-in, using buttons or any action:
 
 ```ts
-// sign-in.ts
-import { auth } from "./auth";
-
 export async function signIn() {
-  const { data, error } = await auth.startSignIn();
-
-  if (error) throw error;
-  window.location.assign(data.url);
+  await auth.startSignIn();
+  // Or: Unbound.startSignIn();
 }
 ```
 
-Then finish it when `/auth/callback` loads:
+Then, finish it.
 
 ```ts
-// auth-callback.ts
-import { auth } from "./auth";
+// For <script> user, this is automatically handled by default, unless you change redirect behaviour, skip this.
 
 export async function completeSignIn() {
   const { data: session, error } = await auth.finishSignIn();
@@ -69,16 +75,18 @@ export async function completeSignIn() {
 }
 ```
 
-Starting and finishing sign-in are separate steps with a browser redirect between them. See the [quickstart](https://docs.unbound.rlzy.me/docs/quickstart) for browser-bundle usage, callback handling, and production security guidance.
+📖 For more details, see the [quickstart](https://docs.unbound.rlzy.me/docs/quickstart).
 
-## Run Unbound locally
+## Run locally
+
+You can run Unbound locally using node, although we recommend using Wrangler due to our current project base.
 
 ### Requirements
 
-- [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) 10.14 or newer
+- [Node.js](https://nodejs.org/) 20.x or newer and [pnpm](https://pnpm.io/) 10.14 or newer.
 - OAuth credentials for at least one supported provider: Google, GitHub, or Discord
 
-Clone the repository and install dependencies:
+Clone the repository and install deps:
 
 ```sh
 git clone https://github.com/then77/unbound.git
@@ -86,87 +94,51 @@ cd unbound
 pnpm install
 ```
 
-### Build the web assets
+### Build web assets (required)
 
-The authentication server serves the interface generated by `@unbound/web`. Before starting the server by itself, build the web assets at least once:
-
-```sh
-pnpm --filter @unbound/web build
-```
-
-During development, you can keep the styles rebuilding in a separate terminal:
+Next step, we need to build the web assets, so you'll have a nice ui shown later when running instead of blank/broken page. Do this at least once:
 
 ```sh
-pnpm --filter @unbound/web dev
+pnpm build:web
 ```
 
-The `dev` command watches the web source and writes the generated stylesheet to `apps/server/public/style.css`. If you run only `@unbound/server` or Wrangler without building these assets first, Unbound may load without its interface styles.
+### Setting up
 
-The root `pnpm dev` command starts both the server and the web-asset watcher for the Node.js development path.
+Next, we need to setup the required environment variables to make it actually working.
 
-### Recommended: Wrangler
+First, if youre using Nodejs, go to folder `apps/server`, find `.env.example`, then copy it to `.env`. For wrangler, its should be available already in `wrangler.jsonc`.
 
-The easiest way to run the complete server locally is with Cloudflare Wrangler. Open `apps/server/wrangler.jsonc` and:
+Then, start the server first:
 
-1. Add `SESSION_SECRET_KEY`, `JWK_PUBLIC_KEY`, and `JWK_PRIVATE_KEY` under `vars`.
-2. Add both the client ID and client secret for at least one provider.
-3. Create a KV namespace with `pnpm --dir apps/server exec wrangler kv namespace create KV`.
-4. Replace the example namespace ID under `kv_namespaces`, keeping the binding name exactly `KV`.
+- Wrangler: Deploy first, or run `wrangler dev` locally.
+- Nodejs: `pnpm dev:server` then open `http://localhost:8080`
 
-> [!NOTE]
-> If you do not have the signing values yet, you can start/deploy Unbound with empty key values and a setup page will shown when you open. Simply follow the instructions provided to complete the setup.
+<details>
+<summary>You should see UI something like this:</summary>
 
-Build the interface and start the local Worker:
+![Image — showing — Unbound — in — setup — phase](https://github.com/user-attachments/assets/2727e032-9d66-4d7d-8083-c37934408497)
 
-```sh
-pnpm --filter @unbound/web build
-pnpm --dir apps/server exec wrangler dev
-```
+</details>
 
-For live style updates, you can run `pnpm --filter @unbound/web dev` in another terminal instead of relying only on the one-time build.
+Follow the instruction on that setup page. For wrangler, you might need to adjust the provided env into the wrangler config.
 
-Wrangler prints the local address when it starts. Configure your provider's OAuth application with the callback URL shown by Unbound's setup instructions.
+### Optional setup: KV
 
-> [!IMPORTANT]
-> Please replace the example KV namespace ID in `kv_namespaces` with one owned by your Cloudflare account, and please do not commit real provider secrets, session keys, or private JWKs. For production, store sensitive values with `wrangler secret put` instead of committing them under `vars`.
+You can additionally setup Cloudflare KV and connect it to Unbound. This is used for temporarily caching used auth callback token, and to prevent replay attack.
 
-### Alternative: Node.js or Bun
-
-The Node.js/Bun server reads the same configuration names from `apps/server/.env` instead of `wrangler.jsonc`:
-
-```properties
-SESSION_SECRET_KEY="..."
-JWK_PUBLIC_KEY="..."
-JWK_PRIVATE_KEY="..."
-
-GOOGLE_CLIENT_ID="..."
-GOOGLE_CLIENT_SECRET="..."
-```
-
-Then run the server and web-asset watcher together:
-
-```sh
-pnpm dev
-```
-
-The Node.js server runs at [http://localhost:8080](http://localhost:8080) by default. This path does not provide the Cloudflare `KV` binding, so unless you know what you're doing, best bet is still using Wrangler instead.
-
-## Deploy to Cloudflare Workers
-
-After configuring `apps/server/wrangler.jsonc` and production secrets, then build and deploy:
-
-```sh
-pnpm --filter @unbound/web build
-pnpm --dir apps/server exec wrangler deploy
-```
+Refer to [Cloudflare docs](https://developers.cloudflare.com/kv/get-started/) for how to set them up, then configure it on the env / wrangler config file.
 
 ## Repository
 
-- `apps/server` — authentication server for Node.js, Bun, and Cloudflare Workers
-- `apps/web` — server-rendered Unbound interface and styles
-- `apps/docs` — documentation site
-- `packages/client-ts` — the [`unbound-auth`](https://www.npmjs.com/package/unbound-auth) TypeScript client
+- `apps/server` - Contains the core Unbound server.
+- `apps/web` - Contains the web interface and assets for Unbound.
+- `apps/docs` - Contains the documentation site for Unbound.
+- `packages/client-ts` - Contains source for [`unbound-auth`](https://www.npmjs.com/package/unbound-auth) TypeScript client.
 
-Contributions and issue reports are welcome through the [GitHub repository](https://github.com/then77/unbound).
+## Credits
 
-Side note: This project is made with help from AI, especially with assisting making docs content.
+- [`hono`](https://hono.dev) - The stack framework powering Unbound core, and ui render for Unbound web interface.
+- [`@hapi/iron`](https://github.com/hapijs/iron) - Core library for handling user data encryption.
+- [`changeset`](https://changesets.dev/) - Very helpful package versioning and publish tool for [`unbound-auth`](https://www.npmjs.com/package/unbound-auth)
+
+— Side note: This project is made with help from AI, especially with assisting making docs content.
