@@ -29,13 +29,13 @@ export function HomePage() {
                     </p>
                     <div class="flex flex-row items-center gap-2.5">
                         <Button asChild={true} variant="primary">
-                            <a href="#get-started">
+                            <a href="https://docs.unbound.rlzy.me/docs/quickstart">
                                 Get Started <Icon icon={ArrowRight} />
                             </a>
                         </Button>
                         <Button asChild={true} variant="outline">
-                            <a href="https://docs.unbound.rlzy.me">
-                                Learn More
+                            <a href="https://demo.unbound.rlzy.me">
+                                See a demo?
                             </a>
                         </Button>
                     </div>
