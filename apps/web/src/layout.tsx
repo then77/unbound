@@ -104,6 +104,7 @@ export function Layout({
                                 )}
                             </p>
                             <div class="flex flex-row gap-4">
+                                <a href="https://docs.unbound.rlzy.me">Docs</a>
                                 <a href="/terms">Terms</a>
                                 <a href="/privacy">Privacy</a>
                                 <a href="https://github.com/then77/unbound">

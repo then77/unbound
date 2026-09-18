@@ -5,9 +5,11 @@
     "private": true,
     "packageManager": "pnpm@10.14.0",
     "scripts": {
+        "start": "node ./dist/server.js",
         "dev": "tsx watch ./src/server.tsx --tsconfig ./tsconfig.json",
         "lint": "tsc --noEmit --project ./tsconfig.json",
         "build": "pnpm --filter @unbound/web run build",
+        "build:node": "tsc --project ./tsconfig.json",
         "cf-typegen": "wrangler types"
     },
     "dependencies": {
@@ -23,6 +25,7 @@
     "devDependencies": {
         "@types/node": "^25.9.1",
         "tsx": "^4.22.4",
+        "typescript": "^6.0.3",
         "wrangler": "^4.100.0"
     }
 }
